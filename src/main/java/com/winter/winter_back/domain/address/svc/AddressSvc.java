@@ -4,14 +4,14 @@ import com.winter.winter_back.domain.address.dto.AddressDto;
 import com.winter.winter_back.domain.address.dto.AddressListResponse;
 
 /**
- * description    :
+ * description    : 주소 서비스 인터페이스
  * fileName       : AddressSvc
- * author         : hyeonju
+ * author         : hj kim
  * date           : 25. 8. 30.
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 25. 8. 30.        hyeonju             최초 생성
+ * 25. 8. 30.        hj kim             최초 생성
  */
 public interface AddressSvc {
     /**

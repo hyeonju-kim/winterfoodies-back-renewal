@@ -1,52 +1,165 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper
-        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.winter.winter_back.domain.store.dao.StoreDao">
 
-<mapper namespace="com.winter.winter_back.domain.store_old.dao.StoreDao">
+    <!-- StoreDto ResultMap -->
+    <resultMap id="storeResultMap" type="com.winter.winter_back.domain.store.dto.StoreDto">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="address" column="address"/>
+        <result property="phone" column="phone"/>
+        <result property="latitude" column="latitude"/>
+        <result property="longitude" column="longitude"/>
+        <result property="status" column="status"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="category" column="category"/>
+        <result property="minOrderAmount" column="min_order_amount"/>
+        <result property="deliveryFee" column="delivery_fee"/>
+        <result property="deliveryTime" column="delivery_time"/>
+        <result property="averageRating" column="averageRating"/>
+        <result property="reviewCount" column="reviewCount"/>
+        <result property="isOpen" column="isOpen"/>
+        <result property="distance" column="distance"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
 
-    <select id="getCategories" resultType="com.winter.winter_back.domain.store_old.dto.CategoryDto">
-        /*
-        SQL ID: com.winter.winter_back.domain.store_old.dao.StoreDao.getCategories
-        SQL 명: 카테고리 조회
-        */
-        SELECT category_id, category_code, category_name
-        FROM tb_category
-        WHERE use_yn = 'Y'
-        ORDER BY category_name
+    <!-- StoreHoursDto ResultMap -->
+    <resultMap id="storeHoursResultMap" type="com.winter.winter_back.domain.store.dto.StoreHoursDto">
+        <id property="id" column="id"/>
+        <result property="storeId" column="store_id"/>
+        <result property="dayOfWeek" column="day_of_week"/>
+        <result property="openTime" column="open_time"/>
+        <result property="closeTime" column="close_time"/>
+        <result property="isHoliday" column="is_holiday"/>
+    </resultMap>
+
+    <!-- StoreCategoryDto ResultMap -->
+    <resultMap id="storeCategoryResultMap" type="com.winter.winter_back.domain.store.dto.StoreCategoryDto">
+        <id property="id" column="id"/>
+        <result property="storeId" column="store_id"/>
+        <result property="categoryCode" column="category_code"/>
+        <result property="categoryName" column="category_name"/>
+    </resultMap>
+
+    <!-- 매장 기본 조회 -->
+    <select id="findById" resultMap="storeResultMap">
+        SELECT s.*
+        FROM tb_store s
+        WHERE s.id = #{storeId}
     </select>
 
-    <select id="getStoresByCategory" parameterType="long" resultType="com.winter.winter_back.domain.store_old.dto.StoreDto">
-        /*
-        SQL ID: com.winter.winter_back.domain.store_old.dao.StoreDao.getStoresByCategory
-        SQL 명: 카테고리별 상점 조회
-        */
+    <!-- 모든 매장 조회 -->
+    <select id="findAll" resultMap="storeResultMap">
+        SELECT s.*
+        FROM tb_store s
+        ORDER BY s.created_at DESC
+    </select>
+
+    <!-- 평점 정보 포함한 매장 조회 -->
+    <select id="findByIdWithRating" resultMap="storeResultMap">
+        SELECT s.*,
+               ss.average_rating as averageRating,
+               ss.total_reviews as reviewCount,
+               CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
+        FROM tb_store s
+                 LEFT JOIN tb_store_stats ss ON s.id = ss.store_id
+        WHERE s.id = #{storeId}
+    </select>
+
+    <!-- 매장 운영시간 조회 -->
+    <select id="findStoreHours" resultMap="storeHoursResultMap">
+        SELECT h.*
+        FROM tb_store_hours h
+        WHERE h.store_id = #{storeId}
+        ORDER BY FIELD(h.day_of_week, 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY')
+    </select>
+
+    <!-- 매장 카테고리 조회 -->
+    <select id="findStoreCategories" resultMap="storeCategoryResultMap">
+        SELECT sc.*
+        FROM tb_store_category sc
+        WHERE sc.store_id = #{storeId}
+        ORDER BY sc.category_name
+    </select>
+
+    <!-- 매장 메뉴 조회  -->
+    <select id="findMenusByStore" resultType="com.winter.winter_back.domain.menu.dto.MenuCategoryResponse">
         SELECT
-        s.idx,
-        s.store_name,
-        s.latitude,
-        s.longitude,
-        s.average_rating,
-        c.category_name
-        FROM
-        tb_store s
-        INNER JOIN tb_store_category_map scm ON s.idx = scm.store_id
-        INNER JOIN tb_category c ON scm.category_id = c.category_id
-        WHERE
-        c.category_id = #{categoryId}
-        ORDER BY
-        s.average_rating DESC
+            mc.id as categoryId,
+            mc.name as categoryName
+        FROM tb_menu_category mc
+        WHERE mc.store_id = #{storeId}
+        ORDER BY mc.sort_order
     </select>
 
-    <select id="getMenusByStore" parameterType="long" resultType="com.winter.winter_back.domain.product_old.dto.ProductDto">
-        /*
-        SQL ID: com.winter.winter_back.domain.store_old.dao.StoreDao.getMenusByStore
-        SQL 명: 상점별 메뉴 조회
-        */
-        SELECT menu_id, store_id, menu_name, price, best_yn
-        FROM tb_menu
-        WHERE store_id = #{storeId}
-        ORDER BY best_yn DESC, price ASC
+    <!-- 매장 등록 -->
+    <insert id="insert" parameterType="com.winter.winter_back.domain.store.dto.StoreDto" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_store (
+            name, description, address, phone,
+            latitude, longitude, status, image_url,
+            category, min_order_amount, delivery_fee, delivery_time,
+            business_number, is_featured, created_at, updated_at
+        ) VALUES (
+                     #{name}, #{description}, #{address}, #{phone},
+                     #{latitude}, #{longitude}, #{status}, #{imageUrl},
+                     #{category}, #{minOrderAmount}, #{deliveryFee}, #{deliveryTime},
+                     #{businessNumber}, #{isFeatured}, NOW(), NOW()
+                 )
+    </insert>
+
+    <!-- 매장 정보 수정 -->
+    <update id="update" parameterType="com.winter.winter_back.domain.store.dto.StoreDto">
+        UPDATE tb_store
+        SET name = #{name},
+            description = #{description},
+            address = #{address},
+            phone = #{phone},
+            latitude = #{latitude},
+            longitude = #{longitude},
+            status = #{status},
+            image_url = #{imageUrl},
+            category = #{category},
+            min_order_amount = #{minOrderAmount},
+            delivery_fee = #{deliveryFee},
+            delivery_time = #{deliveryTime},
+            is_featured = #{isFeatured},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 매장 삭제 -->
+    <delete id="delete">
+        DELETE FROM tb_store WHERE id = #{storeId}
+    </delete>
+
+    <!-- 매장 상태 변경 -->
+    <update id="updateStatus">
+        UPDATE tb_store
+        SET status = #{status}, updated_at = NOW()
+        WHERE id = #{storeId}
+    </update>
+
+    <!-- 카테고리별 매장 수 조회 -->
+    <select id="countByCategory" resultType="long">
+        SELECT COUNT(*)
+        FROM tb_store s
+        WHERE s.category = #{category}
+          AND s.status = 'OPEN'
+    </select>
+
+    <!-- 지역별 매장 조회 -->
+    <select id="findByLocation" resultMap="storeResultMap">
+        SELECT s.*,
+               (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                                * cos(radians(s.longitude) - radians(#{lng}))
+                   + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance
+        FROM tb_store s
+        WHERE s.status = 'OPEN'
+        HAVING distance <![CDATA[<=]]> #{radius}
+        ORDER BY distance ASC
+        LIMIT #{limit}
     </select>
 
 </mapper>

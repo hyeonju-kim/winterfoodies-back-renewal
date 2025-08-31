@@ -8,12 +8,12 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * description    : JSON 가공 유틸리티 클래스
  * fileName       : JsonUtils
- * author         : hyeonju
+ * author         : hj kim
  * date           : 25. 8. 15.
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 25. 8. 15.        hyeonju             최초 생성
+ * 25. 8. 15.        hj kim             최초 생성
  */
 @Slf4j
 public class JsonUtils {

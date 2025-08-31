@@ -7,14 +7,14 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * description    :
+ * description    : 주소 DAO
  * fileName       : AddressDao
- * author         : hyeonju
+ * author         : hj kim
  * date           : 25. 8. 30.
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 25. 8. 30.        hyeonju             최초 생성
+ * 25. 8. 30.        hj kim             최초 생성
  */
 
 @Mapper

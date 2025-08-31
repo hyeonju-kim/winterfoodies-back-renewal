@@ -6,14 +6,14 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * description    :
+ * description    : 주소 리스트 응답 객체
  * fileName       : AddressListResponse
- * author         : hyeonju
+ * author         : hj kim
  * date           : 25. 8. 30.
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 25. 8. 30.        hyeonju             최초 생성
+ * 25. 8. 30.        hj kim             최초 생성
  */
 @Data
 @Builder

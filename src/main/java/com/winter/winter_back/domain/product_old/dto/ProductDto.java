@@ -5,12 +5,12 @@ import lombok.Data;
 /**
  * description    :
  * fileName       : ProductDto
- * author         : hyeonju
+ * author         : hj kim
  * date           : 25. 8. 25.
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 25. 8. 25.        hyeonju             최초 생성
+ * 25. 8. 25.        hj kim             최초 생성
  */
 @Data
 public class ProductDto {

@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.winter.winter_back.domain.menu.dao.MenuDao">
+
+    <!-- MenuDto ResultMap -->
+    <resultMap id="menuResultMap" type="com.winter.winter_back.domain.menu.dto.MenuDto">
+        <id property="id" column="id"/>
+        <result property="storeId" column="store_id"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="price" column="price"/>
+        <result property="originalPrice" column="original_price"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="isPopular" column="is_popular"/>
+        <result property="isRecommended" column="is_recommended"/>
+        <result property="isSoldOut" column="is_sold_out"/>
+        <result property="isActive" column="is_active"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="calories" column="calories"/>
+        <result property="ingredients" column="ingredients"/>
+        <result property="allergens" column="allergens"/>
+        <result property="spiceLevel" column="spice_level"/>
+        <result property="preparationTime" column="preparation_time"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- MenuOptionGroupDto ResultMap -->
+    <resultMap id="menuOptionGroupResultMap" type="com.winter.winter_back.domain.menu.dto.MenuOptionGroupDto">
+        <id property="id" column="id"/>
+        <result property="menuId" column="menu_id"/>
+        <result property="name" column="name"/>
+        <result property="isRequired" column="is_required"/>
+        <result property="maxSelectCount" column="max_select_count"/>
+        <result property="minSelectCount" column="min_select_count"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- MenuOptionDto ResultMap -->
+    <resultMap id="menuOptionResultMap" type="com.winter.winter_back.domain.menu.dto.MenuOptionDto">
+        <id property="id" column="id"/>
+        <result property="optionGroupId" column="option_group_id"/>
+        <result property="name" column="name"/>
+        <result property="priceChange" column="price_change"/>
+        <result property="isAvailable" column="is_available"/>
+        <result property="sortOrder" column="sort_order"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 카테고리별 메뉴 조회 -->
+    <select id="findMenusByCategory" resultMap="menuResultMap">
+        SELECT m.*
+        FROM tb_menus m
+        WHERE m.category_id = #{categoryId}
+          AND m.is_active = TRUE
+        ORDER BY m.sort_order, m.id
+    </select>
+
+    <!-- 매장별 모든 메뉴 조회 -->
+    <select id="findMenusByStore" resultMap="menuResultMap">
+        SELECT m.*
+        FROM tb_menus m
+        WHERE m.store_id = #{storeId}
+          AND m.is_active = TRUE
+        ORDER BY m.category_id, m.sort_order, m.id
+    </select>
+
+
+    <!-- 인기 메뉴 조회 -->
+    <select id="findPopularMenusByStore" resultMap="menuResultMap">
+        SELECT m.*
+        FROM tb_menus m
+        WHERE m.store_id = #{storeId}
+          AND m.is_popular = TRUE
+          AND m.is_active = TRUE
+          AND m.is_sold_out = FALSE
+        ORDER BY m.sort_order, m.id
+        LIMIT 10
+    </select>
+
+    <!-- 추천 메뉴 조회 -->
+    <select id="findRecommendedMenusByStore" resultMap="menuResultMap">
+        SELECT m.*
+        FROM tb_menus m
+        WHERE m.store_id = #{storeId}
+          AND m.is_recommended = TRUE
+          AND m.is_active = TRUE
+          AND m.is_sold_out = FALSE
+        ORDER BY m.sort_order, m.id
+        LIMIT 10
+    </select>
+
+    <!-- 메뉴 검색 -->
+    <select id="searchMenus" resultMap="menuResultMap">
+        SELECT m.*
+        FROM tb_menus m
+        WHERE m.store_id = #{storeId}
+          AND m.is_active = TRUE
+          AND (m.name LIKE CONCAT('%', #{keyword}, '%')
+            OR m.description LIKE CONCAT('%', #{keyword}, '%')
+            OR m.ingredients LIKE CONCAT('%', #{keyword}, '%'))
+        ORDER BY
+            CASE WHEN m.name LIKE CONCAT('%', #{keyword}, '%') THEN 1 ELSE 2 END,
+            m.sort_order, m.id
+    </select>
+
+    <!-- 메뉴별 옵션 그룹 조회 -->
+    <select id="findOptionGroupsByMenu" resultMap="menuOptionGroupResultMap">
+        SELECT og.*
+        FROM tb_menu_option_group og
+        WHERE og.menu_id = #{menuId}
+        ORDER BY og.sort_order, og.id
+    </select>
+
+    <!-- 옵션 그룹별 옵션 조회 -->
+    <select id="findOptionsByGroup" resultMap="menuOptionResultMap">
+        SELECT o.*
+        FROM tb_menu_option o
+        WHERE o.option_group_id = #{optionGroupId}
+          AND o.is_available = TRUE
+        ORDER BY o.sort_order, o.id
+    </select>
+
+    <!-- 메뉴 상세 조회 (옵션 없이) -->
+    <select id="findMenuWithOptions" resultMap="menuResultMap">
+        SELECT m.*
+        FROM tb_menus m
+        WHERE m.id = #{menuId}
+          AND m.is_active = TRUE
+    </select>
+
+    <!-- 메뉴 등록 -->
+    <insert id="insertMenu" parameterType="com.winter.winter_back.domain.menu.dto.MenuDto" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_menus (
+            store_id, category_id, name, description, price, original_price,
+            image_url, is_popular, is_recommended, is_sold_out, is_active,
+            sort_order, calories, ingredients, allergens, spice_level,
+            preparation_time, created_at, updated_at
+        ) VALUES (
+                     #{storeId}, #{categoryId}, #{name}, #{description}, #{price}, #{originalPrice},
+                     #{imageUrl}, #{isPopular}, #{isRecommended}, #{isSoldOut}, #{isActive},
+                     #{sortOrder}, #{calories}, #{ingredients}, #{allergens}, #{spiceLevel},
+                     #{preparationTime}, NOW(), NOW()
+                 )
+    </insert>
+
+    <!-- 메뉴 수정 -->
+    <update id="updateMenu" parameterType="com.winter.winter_back.domain.menu.dto.MenuDto">
+        UPDATE tb_menus
+        SET name = #{name},
+            description = #{description},
+            price = #{price},
+            original_price = #{originalPrice},
+            image_url = #{imageUrl},
+            is_popular = #{isPopular},
+            is_recommended = #{isRecommended},
+            is_sold_out = #{isSoldOut},
+            is_active = #{isActive},
+            sort_order = #{sortOrder},
+            calories = #{calories},
+            ingredients = #{ingredients},
+            allergens = #{allergens},
+            spice_level = #{spiceLevel},
+            preparation_time = #{preparationTime},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 메뉴 삭제 -->
+    <delete id="deleteMenu">
+        DELETE FROM tb_menus WHERE id = #{menuId}
+    </delete>
+
+    <!-- 메뉴 활성화 상태 변경 -->
+    <update id="updateMenuStatus">
+        UPDATE tb_menus
+        SET is_active = #{isActive}, updated_at = NOW()
+        WHERE id = #{menuId}
+    </update>
+
+    <!-- 메뉴 품절 상태 변경 -->
+    <update id="updateMenuSoldOut">
+        UPDATE tb_menus
+        SET is_sold_out = #{isSoldOut}, updated_at = NOW()
+        WHERE id = #{menuId}
+    </update>
+
+</mapper>

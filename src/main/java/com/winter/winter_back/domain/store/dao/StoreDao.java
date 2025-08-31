@@ -1,14 +1,37 @@
 package com.winter.winter_back.domain.store.dao;
 
+import com.winter.winter_back.domain.menu.dto.MenuCategoryResponse;
+import com.winter.winter_back.domain.store.dto.StoreCategoryDto;
+import com.winter.winter_back.domain.store.dto.StoreDto;
+import com.winter.winter_back.domain.store.dto.StoreHoursDto;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
+
 /**
- * description    :
+ * description    : 매장 DAO
  * fileName       : StoreDao
- * author         : hyeonju
- * date           : 25. 8. 29.
+ * author         : hj kim
+ * date           : 25. 8. 31.
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 25. 8. 29.        hyeonju             최초 생성
+ * 25. 8. 31.        hj kim             최초 생성
  */
+
+@Mapper
 public interface StoreDao {
+
+    StoreDto findById(Long storeId);
+
+    List<StoreDto> findAll();
+
+    List<StoreHoursDto> findStoreHours(Long storeId);
+
+    List<StoreCategoryDto> findStoreCategories(Long storeId);
+
+    List<MenuCategoryResponse> findMenusByStore(Long storeId);
+
+    StoreDto findByIdWithRating(Long storeId);
+
 }

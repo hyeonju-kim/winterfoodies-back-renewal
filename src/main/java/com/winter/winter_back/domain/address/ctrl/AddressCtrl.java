@@ -12,14 +12,14 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 
 /**
- * description    :
+ * description    : 주소 컨트롤러
  * fileName       : AddressCtrl
- * author         : hyeonju
+ * author         : hj kim
  * date           : 25. 8. 30.
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 25. 8. 30.        hyeonju             최초 생성
+ * 25. 8. 30.        hj kim             최초 생성
  */
 
 

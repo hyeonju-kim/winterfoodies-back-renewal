@@ -15,12 +15,12 @@ import java.util.List;
 /**
  * description    : 주소 관리 서비스 구현체
  * fileName       : AddressSvcImpl
- * author         : hyeonju
+ * author         : hj kim
  * date           : 25. 8. 30.
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 25. 8. 30.        hyeonju             최초 생성
+ * 25. 8. 30.        hj kim             최초 생성
  */
 @Service
 @RequiredArgsConstructor

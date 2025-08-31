@@ -11,14 +11,14 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 
 /**
- * description    : 프로필 관리
+ * description    : 유저 컨트롤러
  * fileName       : UserController
- * author         : hyeonju
+ * author         : hj kim
  * date           : 25. 8. 29.
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 25. 8. 29.        hyeonju             최초 생성
+ * 25. 8. 29.        hj kim             최초 생성
  */
 @RestController
 @RequestMapping("/user")

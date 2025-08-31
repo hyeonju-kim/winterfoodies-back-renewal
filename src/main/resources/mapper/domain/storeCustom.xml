@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.winter.winter_back.domain.store.dao.StoreCustomDao">
+
+    <select id="findStoresWithDistance" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
+        SELECT s.*,
+        ss.average_rating as averageRating,
+        ss.total_reviews as reviewCount,
+        (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+        * cos(radians(s.longitude) - radians(#{lng}))
+        + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance,
+        CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
+        FROM tb_store s
+        LEFT JOIN tb_store_stats ss ON s.id = ss.store_id
+        <where>
+            <if test="category != null and category != ''">
+                AND s.category = #{category}
+            </if>
+            <if test="maxDistance != null">
+                AND (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                * cos(radians(s.longitude) - radians(#{lng}))
+                + sin(radians(#{lat})) * sin(radians(s.latitude)))) <![CDATA[<=]]> #{maxDistance}
+            </if>
+        </where>
+        <choose>
+            <when test="sort == 'distance'">
+                ORDER BY distance ASC
+            </when>
+            <when test="sort == 'rating'">
+                ORDER BY ss.average_rating DESC, distance ASC
+            </when>
+            <when test="sort == 'popular'">
+                ORDER BY ss.total_orders DESC, ss.average_rating DESC
+            </when>
+            <when test="sort == 'name'">
+                ORDER BY s.name ASC
+            </when>
+            <otherwise>
+                ORDER BY distance ASC
+            </otherwise>
+        </choose>
+        LIMIT #{size} OFFSET #{page}
+    </select>
+
+    <select id="countStoresWithDistance" resultType="long">
+        SELECT COUNT(*)
+        FROM tb_store s
+        <where>
+            <if test="category != null and category != ''">
+                AND s.category = #{category}
+            </if>
+            <if test="maxDistance != null">
+                AND (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                * cos(radians(s.longitude) - radians(#{lng}))
+                + sin(radians(#{lat})) * sin(radians(s.latitude)))) <![CDATA[<=]]> #{maxDistance}
+            </if>
+        </where>
+    </select>
+
+    <select id="searchStoresWithDistance" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
+        SELECT s.*,
+               ss.average_rating as averageRating,
+               ss.total_reviews as reviewCount,
+               (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                                * cos(radians(s.longitude) - radians(#{lng}))
+                   + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance,
+               CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
+        FROM tb_store s
+                 LEFT JOIN tb_store_stats ss ON s.id = ss.store_id
+        WHERE s.name LIKE CONCAT('%', #{keyword}, '%')
+           OR s.description LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY distance ASC
+        LIMIT #{size} OFFSET #{page}
+    </select>
+
+    <select id="countSearchStoresWithDistance" resultType="long">
+        SELECT COUNT(*)
+        FROM tb_store s
+        WHERE s.name LIKE CONCAT('%', #{keyword}, '%')
+           OR s.description LIKE CONCAT('%', #{keyword}, '%')
+    </select>
+
+    <select id="findPopularStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
+        SELECT s.*,
+               ss.average_rating as averageRating,
+               ss.total_reviews as reviewCount,
+               (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                                * cos(radians(s.longitude) - radians(#{lng}))
+                   + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance,
+               CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
+        FROM tb_store s
+                 LEFT JOIN tb_store_stats ss ON s.id = ss.store_id
+        WHERE s.status = 'OPEN'
+        ORDER BY ss.total_orders DESC, ss.average_rating DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findHighRatedStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
+        SELECT s.*,
+               ss.average_rating as averageRating,
+               ss.total_reviews as reviewCount,
+               (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                                * cos(radians(s.longitude) - radians(#{lng}))
+                   + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance,
+               CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
+        FROM tb_store s
+                 INNER JOIN tb_store_stats ss ON s.id = ss.store_id
+        WHERE s.status = 'OPEN'
+          AND ss.average_rating >= 4.0
+          AND ss.total_reviews >= 5
+        ORDER BY ss.average_rating DESC, ss.total_reviews DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findNewStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
+        SELECT s.*,
+               ss.average_rating as averageRating,
+               ss.total_reviews as reviewCount,
+               (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                                * cos(radians(s.longitude) - radians(#{lng}))
+                   + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance,
+               CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
+        FROM tb_store s
+                 LEFT JOIN tb_store_stats ss ON s.id = ss.store_id
+        WHERE s.status = 'OPEN'
+          AND s.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        ORDER BY s.created_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findDiscountStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
+        SELECT s.*,
+               ss.average_rating as averageRating,
+               ss.total_reviews as reviewCount,
+               (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                                * cos(radians(s.longitude) - radians(#{lng}))
+                   + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance,
+               CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
+        FROM tb_store s
+                 LEFT JOIN tb_store_stats ss ON s.id = ss.store_id
+        WHERE s.status = 'OPEN'
+          AND s.delivery_fee = 0  -- 배달비 무료인 매장
+        ORDER BY ss.average_rating DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findRecommendedStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
+        SELECT s.*,
+               ss.average_rating as averageRating,
+               ss.total_reviews as reviewCount,
+               (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                                * cos(radians(s.longitude) - radians(#{lng}))
+                   + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance,
+               CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
+        FROM tb_store s
+                 INNER JOIN tb_store_stats ss ON s.id = ss.store_id
+        WHERE s.status = 'OPEN'
+          AND s.is_featured = TRUE
+          AND (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                               * cos(radians(s.longitude) - radians(#{lng}))
+            + sin(radians(#{lat})) * sin(radians(s.latitude)))) <![CDATA[<=]]> 10
+        ORDER BY ss.average_rating DESC, ss.total_reviews DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findNearbyStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
+        SELECT s.*,
+               ss.average_rating as averageRating,
+               ss.total_reviews as reviewCount,
+               (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                                * cos(radians(s.longitude) - radians(#{lng}))
+                   + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance,
+               CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
+        FROM tb_store s
+                 LEFT JOIN tb_store_stats ss ON s.id = ss.store_id
+        WHERE s.status = 'OPEN'
+        HAVING distance <![CDATA[<=]]> 3  -- 3km 이내
+        ORDER BY distance ASC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

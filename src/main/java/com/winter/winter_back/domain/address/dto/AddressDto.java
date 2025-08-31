@@ -7,14 +7,14 @@ import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 /**
- * description    :
+ * description    : 주소 DTO
  * fileName       : AddressDto
- * author         : hyeonju
+ * author         : hj kim
  * date           : 25. 8. 30.
  * ===========================================================
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
- * 25. 8. 30.        hyeonju             최초 생성
+ * 25. 8. 30.        hj kim             최초 생성
  */
 @Data
 public class AddressDto {
