@@ -1,0 +1,220 @@
+# success
+success:
+  code: 20000000
+  desc: "성공"
+  status: 200
+# 30001000 공통오류
+com.fasterxml.jackson.core.io.JsonEOFException:
+  code: 30000001
+  desc: "JSON 변환 중 문제가 있습니다."
+  status: 400
+com.fasterxml.jackson.core.JsonParseException:
+  code: 30000002
+  desc: "JSON 변환 중 문제가 있습니다."
+  status: 400
+com.fasterxml.jackson.databind.exc.MismatchedInputException:
+  code: 30000003
+  desc: "JSON 변환 중 문제가 있습니다."
+  status: 400
+com.fasterxml.jackson.databind.JsonMappingException:
+  code: 30000004
+  desc: "JSON 변환 중 문제가 있습니다."
+  status: 400
+com.fasterxml.jackson.databind.exc.InvalidDefinitionException:
+  code: 30000005
+  desc: "JSON 변환 중 문제가 있습니다."
+  status: 400
+org.springframework.http.converter.HttpMessageConversionException:
+  code: 30000006
+  desc: "JSON 변환 중 문제가 있습니다."
+  status: 400
+org.springframework.http.converter.HttpMessageNotReadableException:
+  code: 30000007
+  desc: "JSON 변환 중 문제가 있습니다."
+  status: 400
+parameter.validation.error:
+  code: 30000008
+  desc: "입력값 오류 입니다."
+  status: 400
+org.springframework.validation.BindException:
+  code: 30000009
+  desc: "입력값 오류 입니다."
+  status: 400
+parameter.validation.IllegalArgumentException:
+  code: 30000010
+  desc: "입력값 오류 입니다."
+  status: 400
+org.springframework.web.bind.MethodArgumentNotValidException:
+  code: 30000011
+  desc: "입력값 오류 입니다."
+  status: 400
+org.springframework.web.servlet.NoHandlerFoundException:
+  code: 30000012
+  desc: "지원하지 않는 URL"
+  status: 404
+code_not_found:
+  code: 30000013
+  desc: "지원하지 않는 {0} 입니다."
+  status: 400
+login_required:
+  code: 40000001
+  desc: "로그인 후 시도해주세요."
+  status: 401
+login_fail:
+  code: 40000001
+  desc: "로그인 실패."
+  status: 401
+permission_denied:
+  code: 40000002
+  desc: "권한이 없습니다."
+  status: 403
+org.springframework.web.HttpRequestMethodNotSupportedException:
+  code: 40000003
+  desc: "잘못된 요청입니다."
+  status: 405
+data_not_found:
+  code: 40000005
+  desc: "조회결과가 없습니다."
+  status: 400
+cannot_change_use_yn:
+  code: 40000011
+  desc: "사용중인 {0}(은)는 [사용하지 않음]으로 변경할 수 없습니다."
+  status: 500
+invalid-password-pattern:
+  code: 40000012
+  desc: "비밀번호는 숫자,영문,특수문자 포함 8자리 이상만 입력가능합니다"
+  status: 400
+invalid-password:
+  code: 40000013
+  desc: "비밀번호가 일치하지 않습니다."
+  status: 400
+fail_add:
+  code: 41000001
+  desc: "등록에 실패했습니다."
+  status: 500
+fail_update:
+  code: 41000002
+  desc: "수정에 실패했습니다."
+  status: 500
+fail_remove:
+  code: 41000003
+  desc: "삭제에 실패했습니다."
+  status: 500
+duplicated:
+  code: 41000004
+  desc: "동일한 {0}(이)가 존재합니다."
+  status: 409
+check_foreign_key:
+  code: 41000005
+  desc: "{0}(이)가 존재합니다. 삭제할 수 없습니다."
+  status: 500
+fileUpload.ConvertFail:
+  code: 42000001
+  desc: "첨부파일 업로드 처리중 오류가 발생했습니다."
+  status: 500
+fileUpload.InvalidAppendndfileKind:
+  code: 42000002
+  desc: "등록되지 않은 첨부파일유형코드입니다."
+  status: 500
+file_oversize:
+  code: 42000003
+  desc: "파일 크기가 {0}를 초과했습니다."
+  status: 500
+org.springframework.web.multipart.MaxUploadSizeExceededException:
+  code: 42000004
+  desc: "파일 크기가 최대 허용 크기를 초과했습니다."
+  status: 500
+file_permission_denied:
+  code: 42000005
+  desc: "지원하지 않는 확장자입니다.\r\n{0}"
+  status: 500
+file_empty:
+  code: 42000006
+  desc: "파일이 존재하지 않습니다."
+  status: 404
+data_empty:
+  code: 42000007
+  desc: "데이터가 존재하지 않습니다."
+  status: 404
+org.springframework.jdbc:
+  code: 49000001
+  desc: "데이터베이스 오류"
+  status: 500
+org.apache.ibatis.reflection.ReflectionException:
+  code: 49000002
+  desc: "데이터베이스 오류"
+  status: 500
+org.springframework.dao.DataAccessException:
+  code: 49000003
+  desc: "데이터베이스 오류"
+  status: 500
+org.apache.ibatis.javassist.NotFoundException:
+  code: 49000004
+  desc: "데이터베이스 오류"
+  status: 500
+# DB 중복키 발생 오류
+org.springframework.dao.DuplicateKeyException:
+  code: 49000005
+  desc: "데이터베이스 오류(중복키 발생)"
+  status: 500
+# DB 외래키 참조 제약(참조하는 외래키 때문에 삭제 및 변경 불가)
+org.springframework.dao.DataIntegrityViolationException:
+  code: 49000006
+  desc: "데이터베이스 오류(외래키 참조 조건)"
+  status: 500
+java.sql.SQLException:
+  code: 49000007
+  desc: "데이터 베이스 SQL 에러."
+  status: 500
+org.springframework.jdbc.BadSqlGrammarException:
+  code: 49000008
+  desc: "데이터베이스 오류({0})"
+  status: 500
+redis:
+  code: 49000009
+  desc: "redis 오류"
+  status: 500
+org.springframework.web.client.HttpStatusCodeException:
+  code: 50000001
+  desc: "존재하지 않는 HTTP STATUS로 응답 받았습니다."
+  status: 500
+java.net.SocketTimeoutException:
+  code: 50000002
+  desc: "시스템으로 부터 응답을 받지 못하였습니다."
+  status: 500
+java.net.ConnectException:
+  code: 50000003
+  desc: "시스템과 Connection 접속에 실패하였습니다."
+  status: 500
+java.net.FileNotFoundException:
+  code: 50000004
+  desc: "시스템에서 파일 다운로드에 실패하였습니다."
+  status: 500
+java.net.UnknownHostException:
+  code: 50000005
+  desc: "DNS 확인 오류"
+  status: 500
+notdefine:
+  code: 40000999
+  desc: "정의되지않은 오류입니다 "
+  status: 500
+# 59000001~ 시스템오류
+unknown:
+  code: 59999999
+  desc: "시스템 오류가 발생했습니다"
+  status: 500
+java.lang.NullPointerException:
+  code: 59000001
+  desc: "시스템 오류가 발생했습니다"
+  status: 500
+
+# 60000001~ 비즈니스 예외
+invalid_vehicle:
+  code: 60000001
+  desc: "존재하지 않는 차량입니다."
+  status: 400
+
+required_vehicle_id:
+  code: 60000002
+  desc: "vehicleId는 필수입니다."
+  status: 500

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <property name="LOG_PATH" value="/app/winter/back/log" />
+
+    <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/application.log</file>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level --- [%thread] %logger{36} : %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/application.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+            <maxHistory>2</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="ch.qos.logback.classic.PatternLayout">
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) --- [%thread] %cyan(%logger{36}) : %msg%n</pattern>
+            </layout>
+        </encoder>
+    </appender>
+
+    <root level="info">
+        <appender-ref ref="file" />
+        <appender-ref ref="console" />
+    </root>
+
+    <!-- 좀 더 보기 좋은 MyBatis 쿼리 Log : log4jdbc -->
+    <logger name="jdbc.sqlonly" level="debug" />
+    <logger name="jdbc.sqltiming" level="debug" /> <!-- 실행된 SQL + 바인딩된 값 + 실행시간 -->
+    <logger name="jdbc.audit" level="off" />
+    <logger name="jdbc.resultset" level="off" />
+    <logger name="jdbc.resultsettable" level="debug" /> <!-- 결과 ResultSet 테이블 형식으로 출력 -->
+    <logger name="jdbc.connection" level="off" />
+    <logger name="log4jdbc.log4j2" level="off"/>
+
+</configuration>

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.winter.winter_back.domain.address.dao.AddressDao">
+
+    <!-- AddressDto resultMap -->
+    <resultMap id="addressResultMap" type="com.winter.winter_back.domain.address.dto.AddressDto">
+        <id property="idx" column="idx"/>
+        <result property="userId" column="user_id"/>
+        <result property="alias" column="alias"/>
+        <result property="baseAddress" column="base_address"/>
+        <result property="detailAddress" column="detail_address"/>
+        <result property="latitude" column="latitude"/>
+        <result property="longitude" column="longitude"/>
+        <result property="isDefault" column="is_default"/>
+        <result property="deliveryInstructions" column="delivery_instructions"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 사용자 주소 목록 조회 -->
+    <select id="getAddressList" parameterType="java.lang.String" resultMap="addressResultMap">
+        /*
+        SQL ID: com.winter.winter_back.domain.address.dao.AddressDao.getAddressList
+        SQL 명: 사용자 주소 목록 조회
+        */
+        SELECT idx
+             , user_id
+             , alias
+             , base_address
+             , detail_address
+             , latitude
+             , longitude
+             , is_default
+             , delivery_instructions
+             , created_at
+             , updated_at
+        FROM tb_user_address
+        WHERE user_id = #{userId}
+        ORDER BY is_default DESC, created_at DESC
+    </select>
+
+    <!-- 주소 상세 조회 -->
+    <select id="getAddress" resultMap="addressResultMap">
+        /*
+        SQL ID: com.winter.winter_back.domain.address.dao.AddressDao.getAddress
+        SQL 명: 주소 상세 조회
+        */
+        SELECT idx
+             , user_id
+             , alias
+             , base_address
+             , detail_address
+             , latitude
+             , longitude
+             , is_default
+             , delivery_instructions
+             , created_at
+             , updated_at
+        FROM tb_user_address
+        WHERE idx = #{addressId}
+          AND user_id = #{userId}
+    </select>
+
+    <!-- 주소 등록 -->
+    <insert id="regAddress" parameterType="com.winter.winter_back.domain.address.dto.AddressDto"
+            useGeneratedKeys="true" keyProperty="idx">
+        /*
+        SQL ID: com.winter.winter_back.domain.address.dao.AddressDao.regAddress
+        SQL 명: 주소 등록
+        */
+        INSERT INTO tb_user_address ( user_id
+                                    , alias
+                                    , base_address
+                                    , detail_address
+                                    , latitude
+                                    , longitude
+                                    , is_default
+                                    , delivery_instructions
+                                    , created_at
+                                    , updated_at)
+        VALUES ( #{userId}
+               , #{alias}
+               , #{baseAddress}
+               , #{detailAddress}
+               , #{latitude}
+               , #{longitude}
+               , #{isDefault}
+               , #{deliveryInstructions}
+               , CURRENT_TIMESTAMP()
+               , CURRENT_TIMESTAMP())
+    </insert>
+
+    <!-- 주소 수정 -->
+    <update id="modAddress" parameterType="com.winter.winter_back.domain.address.dto.AddressDto">
+        /*
+        SQL ID: com.winter.winter_back.domain.address.dao.AddressDao.modAddress
+        SQL 명: 주소 수정
+        */
+        UPDATE tb_user_address
+        SET alias                 = #{alias}
+          , base_address          = #{baseAddress}
+          , detail_address        = #{detailAddress}
+          , latitude              = #{latitude}
+          , longitude             = #{longitude}
+          , delivery_instructions = #{deliveryInstructions}
+          , updated_at            = CURRENT_TIMESTAMP()
+        WHERE idx = #{idx}
+          AND user_id = #{userId}
+    </update>
+
+    <!-- 주소 삭제 -->
+    <delete id="delAddress">
+        /*
+        SQL ID: com.winter.winter_back.domain.address.dao.AddressDao.delAddress
+        SQL 명: 주소 삭제
+        */
+        DELETE
+        FROM tb_user_address
+        WHERE idx = #{addressId}
+          AND user_id = #{userId}
+    </delete>
+
+    <!-- 기본 주소 설정 해제 -->
+    <update id="modAllAddressDefaultN">
+        UPDATE tb_user_address
+        SET is_default = 'N'
+          , updated_at = CURRENT_TIMESTAMP()
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- 기본 주소 설정 -->
+    <update id="modAddressDefaultY">
+        UPDATE tb_user_address
+        SET is_default = 'Y'
+          , updated_at = CURRENT_TIMESTAMP()
+        WHERE idx = #{addressId}
+          AND user_id = #{userId}
+    </update>
+
+    <!-- 사용자의 주소 개수 조회 -->
+    <select id="getAddressCount" resultType="int">
+        /*
+        SQL ID: com.winter.winter_back.domain.address.dao.AddressDao.getAddressCount
+        SQL 명: 사용자의 주소 개수 조회
+        */
+        SELECT COUNT(1)
+        FROM tb_user_address
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>

@@ -1,0 +1,93 @@
+############################
+# Common config
+############################
+server:
+  port: 8085
+  servlet:
+    context-path: /
+mybatis:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    jdbc-type-for-null: NULL
+logging:
+  config: classpath:log/logback.xml
+  level:
+    org.springframework.security: DEBUG
+
+############################
+# Spring config
+############################
+spring:
+  output:
+    ansi:
+      enabled: ALWAYS
+  application:
+    name: winter_back
+#  datasource:
+#    url: jdbc:log4jdbc:mariadb://localhost:3307/winter_app?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+#    username: root
+#    password: 1234
+#    driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+  datasource:
+    url: jdbc:mariadb://localhost:3307/winter_app?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+    username: root
+    password: 1234
+    driver-class-name: org.mariadb.jdbc.Driver
+  # JPA SQL 로깅 설정 추가
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  security:
+    application-name: MGMT
+
+    # Spring Security에서 보안 필터를 완전히 무시할 경로들 (정적 리소스용)
+    # 이 경로들은 Spring Security 필터 체인을 아예 거치지 않음
+    # 주로 CSS, JS, 이미지 같은 정적 파일들이나 헬스체크용 엔드포인트
+    static-contents-url-patterns:
+#      /css/sample
+
+    # 인증(로그인) 없이 누구나 접근 가능한 URL 패턴들
+    # Spring Security 필터는 거치지만 인증을 요구하지 않음
+    # 회원가입, 로그인 페이지, 공개 API 등
+    permit-all-url-patterns:
+      /login
+      ,/user/**
+      ,/actuator/**
+
+    # 완전히 인증된 사용자만 접근 가능한 URL 패턴들
+    # 로그인은 했지만 "Remember Me" 같은 부분 인증이 아닌
+    # 완전한 인증(아이디/비밀번호로 직접 로그인)을 거친 사용자만 접근 가능
+    fully-authenticated-url-patterns:
+      /common/**
+      ,/logout
+    login:
+      login-page-url: /error/401
+      processing-url: /login
+      success-url: /
+      secret-key: T7zLmnao78Rd4fQmmbTyG9o6jA9XGT9f
+    logout:
+      req-url: /logout
+    reload-role-fixed-rate-string: 86400000
+    metrics:
+      tags:
+        application: MGMT
+  redis:
+    host: localhost
+    port: 6379
+  cache:
+    type: redis
+
+
+
+############################
+# Custom config
+############################
+cnf:
+  exception:
+    path: /exception/exception.yml
+  url:
+    auto-convert:
+      excludes: /static/**,/**/download/**, **/test, /member/**, /metrics

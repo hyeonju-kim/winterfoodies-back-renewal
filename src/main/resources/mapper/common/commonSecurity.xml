@@ -1,0 +1,208 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.winter.winter_back.common.security.dao.SecuritySupportDao">
+    <select id="selectUserEncPswd" parameterType="java.lang.String" resultType="java.lang.String">
+        /*
+        SQL ID : co.kr.abacus.nds.common.dao.SecuritySupportDao.selectUserEncPswd
+        SQL 명: 사용자 패스워드 조회
+        */
+        SELECT A.pw /* 암호화된 패스워드 */
+        FROM tb_user A
+        WHERE A.id = #{userId}
+          AND A.USE_YN = 'Y'
+    </select>
+
+    <resultMap id="userInfoMap" type="com.winter.winter_back.common.security.dto.ComLoginUserInfoDto">
+        <result property="userId" column="id"/>
+        <result property="userNm" column="name"/>
+        <result property="tel" column="tel"/>
+    </resultMap>
+
+
+    <select id="selectUser" parameterType="java.lang.String" resultMap="userInfoMap">
+        /*
+        SQL ID : co.kr.abacus.nds.common.dao.SecuritySupportDao.selectUser
+        SQL 명: 로그인 할 사용자 조회
+        */
+        SELECT A.id /* 사용자 아이디 */
+             , A.name /* 사용자 명 */
+             , A.tel /* 연락처 */
+        FROM tb_user A
+        WHERE A.id = #{userId}
+          AND A.use_yn = 'Y'
+    </select>
+
+    <select id="getLoginUserRole" parameterType="java.lang.String"
+            resultType="com.winter.winter_back.common.security.dto.ComRoleUserDto">
+        /*
+        SQL ID : co.kr.abacus.nds.common.dao.SecuritySupportDao.getUsrRole
+        SQL 명: 특정 사용자에게 할당된 역할 목록 조회
+        */
+        SELECT A.AUTH_ID AS ROLE_ID /* 역할 아이디 */
+        FROM tb_auth_user_map A
+                 INNER JOIN
+             tb_auth AUTH
+             ON
+                 A.AUTH_ID = AUTH.AUTH_ID
+                 INNER JOIN
+             tb_user user
+             ON
+                 A.USER_ID = user.id
+                     AND
+                 user.USE_YN = 'Y'
+        WHERE A.USER_ID = #{userId}
+    </select>
+    <select id="getRoleMenuScrn" parameterType="java.util.List"
+            resultType="com.winter.winter_back.common.security.dto.RoleMenuScrnMapg">
+        /*
+        SQL ID : co.kr.abacus.nds.common.dao.SecuritySupportDao.getRoleMenuScrn
+        SQL 명 : 사용자의 역할-메뉴-화면 매핑 정보 조회(관리자 시스템용도)
+        */
+        WITH RECURSIVE CTE AS (
+        SELECT
+        MNU.menu_id,
+        MNU.menu_name,
+        MNU.parent_menu_id AS HPOS_MENU_ID,
+        1 AS LVL,
+        MNU.menu_name AS MENU_PATH,
+        CAST(MNU.sort AS CHAR) AS MENU_ORDER,
+        MNU.menu_path AS MENU_URL,
+        MNU.menu_id AS MENU_IDX
+        FROM
+        tb_menu MNU
+        INNER JOIN tb_auth_menu_map MAP ON MNU.menu_id = MAP.menu_id
+        INNER JOIN tb_auth AUTH ON MAP.auth_id = AUTH.auth_id
+        WHERE
+        MAP.auth_id IN
+        <foreach collection="list" item="item" index="index" separator="," open="(" close=")">
+            #{item.roleId}
+        </foreach>
+        AND MNU.parent_menu_id IS NULL
+
+        UNION ALL
+
+        SELECT
+        B.menu_id,
+        B.menu_name,
+        B.parent_menu_id AS HPOS_MENU_ID,
+        C.LVL + 1 AS LVL,
+        CONCAT(C.MENU_PATH, ' > ', B.menu_name) AS MENU_PATH,
+        CONCAT(C.MENU_ORDER, ',', B.sort) AS MENU_ORDER,
+        B.menu_path AS MENU_URL,
+        B.menu_id AS MENU_IDX
+        FROM
+        tb_menu B
+        INNER JOIN tb_auth_menu_map MAP ON B.menu_id = MAP.menu_id
+        INNER JOIN tb_auth AUTH ON MAP.auth_id = AUTH.auth_id
+        INNER JOIN CTE C ON B.parent_menu_id = C.menu_id
+        )
+        SELECT
+        RESULT.menu_id AS MENU_ID,
+        COALESCE(RESULT.HPOS_MENU_ID, '#') AS HPOS_MENU_ID,
+        RESULT.MENU_IDX,
+        RESULT.MENU_ORDER,
+        RESULT.menu_name AS MENU_NM,
+        RESULT.LVL,
+        RESULT.MENU_PATH,
+        RESULT.MENU_URL
+        FROM
+        CTE RESULT
+        LEFT OUTER JOIN tb_auth_menu_map MAP ON RESULT.menu_id = MAP.menu_id AND MAP.auth_id IN
+        <foreach collection="list" item="item" index="index" separator="," open="(" close=")">
+            #{item.roleId}
+        </foreach>
+        ORDER BY
+        RESULT.MENU_IDX
+    </select>
+    <select id="getRoleMenuScrnRoleUse" parameterType="java.util.List"
+            resultType="com.winter.winter_back.common.security.dto.RoleMenuScrnMapg">
+        /*
+        SQL ID : co.kr.abacus.nds.common.dao.SecuritySupportDao.getRoleMenuScrnRoleUse
+        SQL 명 : 사용자의 역할-메뉴-화면 매핑 정보 조회(모든 사용자 용도)
+        */
+        WITH RECURSIVE CTE AS (
+        SELECT
+        MNU.menu_id,
+        MNU.menu_name,
+        MNU.parent_menu_id AS HPOS_MENU_ID,
+        1 AS LVL,
+        MNU.menu_name AS MENU_PATH,
+        CAST(MNU.sort AS CHAR) AS MENU_ORDER,
+        MNU.menu_path AS MENU_URL,
+        MNU.menu_id AS MENU_IDX
+        FROM
+        tb_menu MNU
+        INNER JOIN tb_auth_menu_map MAP ON MNU.menu_id = MAP.menu_id
+        INNER JOIN tb_auth AUTH ON MAP.auth_id = AUTH.auth_id
+        WHERE
+        MAP.auth_id IN
+        <foreach collection="list" item="item" index="index" separator="," open="(" close=")">
+            #{item.roleId}
+        </foreach>
+        AND MNU.parent_menu_id IS NULL
+
+        UNION ALL
+
+        SELECT
+        B.menu_id,
+        B.menu_name,
+        B.parent_menu_id AS HPOS_MENU_ID,
+        C.LVL + 1 AS LVL,
+        CONCAT(C.MENU_PATH, ' > ', B.menu_name) AS MENU_PATH,
+        CONCAT(C.MENU_ORDER, ',', B.sort) AS MENU_ORDER,
+        B.menu_path AS MENU_URL,
+        B.menu_id AS MENU_IDX
+        FROM
+        tb_menu B
+        INNER JOIN tb_auth_menu_map MAP ON B.menu_id = MAP.menu_id
+        INNER JOIN tb_auth AUTH ON MAP.auth_id = AUTH.auth_id
+        INNER JOIN CTE C ON B.parent_menu_id = C.menu_id
+        )
+        SELECT
+        RESULT.menu_id AS MENU_ID,
+        COALESCE(RESULT.HPOS_MENU_ID, '#') AS HPOS_MENU_ID,
+        RESULT.MENU_IDX,
+        RESULT.MENU_ORDER,
+        RESULT.menu_name AS MENU_NM,
+        RESULT.LVL,
+        RESULT.MENU_PATH,
+        RESULT.MENU_URL
+        FROM
+        CTE RESULT
+        LEFT OUTER JOIN tb_auth_menu_map MAP ON RESULT.menu_id = MAP.menu_id AND MAP.auth_id IN
+        <foreach collection="list" item="item" index="index" separator="," open="(" close=")">
+            #{item.roleId}
+        </foreach>
+        ORDER BY
+        RESULT.MENU_IDX
+    </select>
+    <select id="getRoleApiAuthMapgForSpringSecurity"
+            resultType="com.winter.winter_back.common.security.dto.RoleApiAuthMapg">
+        /*
+        SQL ID : co.kr.abacus.nds.common.dao.SecuritySupportDao.getRoleApiAuthMapgForSpringSecurity
+        SQL 명: 스프링 시큐리티 관련 역할-api-권한 매핑 전체 정보 조회
+        */
+        SELECT A.AUTH_ID AS ROLE_ID /* 역할 아이디 */
+             , A.API_ID /* API 아이디 */
+             , API.api_name /* API 명 */
+             , API.API_PATH_PTRN /* API URL 패턴 */
+        FROM tb_auth_api_map A
+                 INNER JOIN
+             tb_api API
+             ON
+                 A.API_ID = API.API_ID
+                 INNER JOIN
+             tb_auth AUTH
+             ON
+                 AUTH.AUTH_ID = A.AUTH_ID
+    </select>
+    <insert id="insertLoginUser" parameterType="java.lang.String">
+        /*
+        SQL ID : co.kr.abacus.nds.common.dao.SecuritySupportDao.insertLoginUser
+        SQL 명: 사용자 로그인 정보 저장
+        */
+        INSERT INTO tb_user_login_history ( USER_ID
+                                          , CRTE_DT)
+        VALUES ( #{userId}
+               , CURRENT_TIMESTAMP())
+    </insert>
+</mapper>
