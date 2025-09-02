@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.winter.winter_back.domain.cart.dao.CartItemDao">
+
+    <!-- CartItemDto ResultMap -->
+    <resultMap id="CartItemResultMap" type="com.winter.winter_back.domain.cart.dto.CartItemDto">
+        <id property="id" column="id"/>
+        <result property="cartId" column="cart_id"/>
+        <result property="menuId" column="menu_id"/>
+        <result property="menuName" column="menu_name"/>
+        <result property="menuImage" column="menu_image"/>
+        <result property="menuPrice" column="menu_price"/>
+        <result property="quantity" column="quantity"/>
+        <result property="totalPrice" column="total_price"/>
+        <result property="specialRequest" column="special_request"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <collection property="options" ofType="com.winter.winter_back.domain.cart.dto.CartItemOptionDto">
+            <id property="id" column="option_id"/>
+            <result property="cartItemId" column="cart_item_id"/>
+            <result property="optionId" column="option_id_ref"/>
+            <result property="optionName" column="option_name"/>
+            <result property="optionValue" column="option_value"/>
+            <result property="optionPrice" column="option_price"/>
+        </collection>
+    </resultMap>
+
+    <!-- CartItemOptionDto ResultMap -->
+    <resultMap id="CartItemOptionResultMap" type="com.winter.winter_back.domain.cart.dto.CartItemOptionDto">
+        <id property="id" column="id"/>
+        <result property="cartItemId" column="cart_item_id"/>
+        <result property="optionId" column="option_id"/>
+        <result property="optionName" column="option_name"/>
+        <result property="optionValue" column="option_value"/>
+        <result property="optionPrice" column="option_price"/>
+    </resultMap>
+
+    <!-- 장바구니 아이템 ID로 조회 -->
+    <select id="findById" parameterType="long" resultMap="CartItemResultMap">
+        SELECT ci.id, ci.cart_id, ci.menu_id, ci.quantity,
+               ci.total_price, ci.special_request, ci.created_at, ci.updated_at,
+               m.name as menu_name, m.image_url as menu_image, m.price as menu_price,
+               cio.id as option_id, cio.cart_item_id, cio.option_id as option_id_ref,
+               cio.option_name, cio.option_value, cio.option_price
+        FROM tb_cart_item ci
+                 LEFT JOIN tb_menus m ON ci.menu_id = m.id
+                 LEFT JOIN tb_cart_item_option cio ON ci.id = cio.cart_item_id
+        WHERE ci.id = #{id}
+        ORDER BY cio.id ASC
+    </select>
+
+    <!-- 장바구니 ID로 아이템 목록 조회 -->
+    <select id="findByCartId" parameterType="long" resultMap="CartItemResultMap">
+        SELECT ci.id, ci.cart_id, ci.menu_id, ci.quantity,
+               ci.total_price, ci.special_request, ci.created_at, ci.updated_at,
+               m.name as menu_name, m.image_url as menu_image, m.price as menu_price,
+               cio.id as option_id, cio.cart_item_id, cio.option_id as option_id_ref,
+               cio.option_name, cio.option_value, cio.option_price
+        FROM tb_cart_item ci
+                 LEFT JOIN tb_menus m ON ci.menu_id = m.id
+                 LEFT JOIN tb_cart_item_option cio ON ci.id = cio.cart_item_id
+        WHERE ci.cart_id = #{cartId}
+        ORDER BY ci.created_at ASC, cio.id ASC
+    </select>
+
+    <!-- 장바구니 아이템 옵션 조회 -->
+    <select id="findOptionsByCartItemId" parameterType="long" resultMap="CartItemOptionResultMap">
+        SELECT id, cart_item_id, option_id, option_name, option_value, option_price
+        FROM tb_cart_item_option
+        WHERE cart_item_id = #{cartItemId}
+        ORDER BY id ASC
+    </select>
+
+    <!-- 장바구니 아이템 생성 -->
+    <insert id="insert" parameterType="com.winter.winter_back.domain.cart.dto.CartItemDto"
+            useGeneratedKeys="true" keyProperty="id">
+        /*
+        SQL ID: cartDao.insert
+        SQL 명: 장바구니 아이템 생성
+        */
+        INSERT INTO tb_cart_item (cart_id, menu_id, quantity, total_price, special_request, created_at, updated_at)
+        VALUES (#{cartId}, #{menuId}, #{quantity}, #{totalPrice}, #{specialRequest}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- 장바구니 아이템 옵션 생성 -->
+    <insert id="insertOption" parameterType="com.winter.winter_back.domain.cart.dto.CartItemOptionDto"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_cart_item_option (cart_item_id, option_id, option_name, option_value, option_price)
+        VALUES (#{cartItemId}, #{optionId}, #{optionName}, #{optionValue}, #{optionPrice})
+    </insert>
+
+    <!-- 장바구니 아이템 수량 및 가격 업데이트 -->
+    <update id="updateQuantityAndPrice">
+        UPDATE tb_cart_item
+        SET quantity = #{quantity},
+            total_price = #{totalPrice},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 장바구니 아이템 삭제 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM tb_cart_item WHERE id = #{id}
+    </delete>
+
+    <!-- 장바구니의 모든 아이템 삭제 -->
+    <delete id="deleteByCartId" parameterType="long">
+        DELETE FROM tb_cart_item WHERE cart_id = #{cartId}
+    </delete>
+
+    <!-- 장바구니 아이템의 모든 옵션 삭제 -->
+    <delete id="deleteOptionsByCartItemId" parameterType="long">
+        DELETE FROM tb_cart_item_option WHERE cart_item_id = #{cartItemId}
+    </delete>
+
+</mapper>

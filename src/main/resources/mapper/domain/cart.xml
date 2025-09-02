@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.winter.winter_back.domain.cart.dao.CartDao">
+
+    <resultMap id="CartResultMap" type="com.winter.winter_back.domain.cart.dto.CartDto">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="storeId" column="store_id"/>
+        <result property="storeName" column="store_name"/>
+        <result property="storeImage" column="store_image"/>
+        <result property="totalQuantity" column="total_quantity"/>
+        <result property="totalPrice" column="total_price"/>
+        <result property="deliveryFee" column="delivery_fee"/>
+        <result property="minOrderAmount" column="min_order_amount"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <collection property="items" ofType="com.winter.winter_back.domain.cart.dto.CartItemDto">
+            <id property="id" column="item_id"/>
+            <result property="cartId" column="cart_id"/>
+            <result property="menuId" column="menu_id"/>
+            <result property="menuName" column="menu_name"/>
+            <result property="menuImage" column="menu_image"/>
+            <result property="menuPrice" column="menu_price"/>
+            <result property="quantity" column="quantity"/>
+            <result property="totalPrice" column="item_total_price"/>
+            <result property="specialRequest" column="special_request"/>
+            <result property="createdAt" column="item_created_at"/>
+            <result property="updatedAt" column="item_updated_at"/>
+        </collection>
+    </resultMap>
+
+    <!-- 장바구니 ID로 조회 -->
+    <select id="findById" parameterType="long" resultMap="CartResultMap">
+        SELECT c.id, c.user_id, c.store_id, c.created_at, c.updated_at,
+               s.name as store_name, s.image_url as store_image,
+               s.delivery_fee, s.min_order_amount,
+               ci.id as item_id, ci.cart_id, ci.menu_id, ci.quantity,
+               ci.total_price as item_total_price, ci.special_request,
+               ci.created_at as item_created_at, ci.updated_at as item_updated_at,
+               m.name as menu_name, m.image_url as menu_image, m.price as menu_price
+        FROM tb_cart c
+                 LEFT JOIN tb_store s ON c.store_id = s.id
+                 LEFT JOIN tb_cart_item ci ON c.id = ci.cart_id
+                 LEFT JOIN tb_menus m ON ci.menu_id = m.id
+        WHERE c.id = #{id}
+        ORDER BY ci.created_at ASC
+    </select>
+
+    <!-- 사용자 ID로 장바구니 조회 -->
+    <select id="findByUserId" parameterType="string" resultMap="CartResultMap">
+        SELECT c.id, c.user_id, c.store_id, c.created_at, c.updated_at,
+               s.name as store_name, s.image_url as store_image,
+               s.delivery_fee, s.min_order_amount,
+               ci.id as item_id, ci.cart_id, ci.menu_id, ci.quantity,
+               ci.total_price as item_total_price, ci.special_request,
+               ci.created_at as item_created_at, ci.updated_at as item_updated_at,
+               m.name as menu_name, m.image_url as menu_image, m.price as menu_price
+        FROM tb_cart c
+                 LEFT JOIN tb_store s ON c.store_id = s.id
+                 LEFT JOIN tb_cart_item ci ON c.id = ci.cart_id
+                 LEFT JOIN tb_menus m ON ci.menu_id = m.id
+        WHERE c.user_id = #{userId}
+        ORDER BY ci.created_at ASC
+    </select>
+
+    <!-- 장바구니 생성 -->
+    <insert id="insert" parameterType="com.winter.winter_back.domain.cart.dto.CartDto"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_cart (user_id, store_id, created_at, updated_at)
+        VALUES (#{userId}, #{storeId}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- 장바구니 업데이트 시간 갱신 -->
+    <update id="updateUpdatedAt" parameterType="long">
+        UPDATE tb_cart
+        SET updated_at = NOW()
+        WHERE id = #{cartId}
+    </update>
+
+    <!-- 장바구니 삭제 (ID로) -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM tb_cart WHERE id = #{id}
+    </delete>
+
+    <!-- 장바구니 삭제 (사용자 ID로) -->
+    <delete id="deleteByUserId" parameterType="string">
+        DELETE FROM tb_cart WHERE user_id = #{userId}
+    </delete>
+
+</mapper>
