@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.winter.winter_back.domain.review.dao.ReviewDao">
+
+    <!-- 결과 맵 정의 -->
+    <resultMap id="reviewResultMap" type="com.winter.winter_back.domain.review.dto.ReviewDto">
+        <id property="idx" column="idx"/>
+        <result property="storeId" column="store_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="orderOrderId" column="order_order_id"/>
+        <result property="rating" column="rating"/>
+        <result property="images" column="images"/>
+        <result property="content" column="content"/>
+        <result property="createdDatetime" column="created_datetime"/>
+        <result property="modifiedDatetime" column="modified_datetime"/>
+        <!-- 매장 정보 -->
+        <result property="storeName" column="store_name"/>
+        <result property="storeCategory" column="store_category"/>
+        <result property="storeImageUrl" column="store_image_url"/>
+        <!-- 사용자 정보 -->
+        <result property="userName" column="user_name"/>
+    </resultMap>
+
+    <!-- 리뷰 통계 결과 맵 -->
+    <resultMap id="reviewStatsResultMap" type="com.winter.winter_back.domain.review.dto.ReviewStatsResponse">
+        <result property="storeId" column="store_id"/>
+        <result property="totalReviews" column="total_reviews"/>
+        <result property="averageRating" column="average_rating"/>
+        <result property="rating5Count" column="rating_5_count"/>
+        <result property="rating4Count" column="rating_4_count"/>
+        <result property="rating3Count" column="rating_3_count"/>
+        <result property="rating2Count" column="rating_2_count"/>
+        <result property="rating1Count" column="rating_1_count"/>
+    </resultMap>
+
+    <!-- 매장 리뷰 목록 조회 (페이징) -->
+    <select id="selectStoreReviews" resultMap="reviewResultMap">
+        SELECT r.idx,
+               r.store_id,
+               r.user_id,
+               r.order_order_id,
+               r.rating,
+               r.images,
+               r.content,
+               r.created_datetime,
+               r.modified_datetime,
+               s.name      as store_name,
+               s.category  as store_category,
+               s.image_url as store_image_url,
+               u.name      as user_name
+        FROM tb_review r
+                 INNER JOIN tb_store s ON r.store_id = s.id
+                 LEFT JOIN tb_user u ON CAST(r.user_id AS CHAR) COLLATE utf8mb4_general_ci = u.id
+        WHERE r.store_id = #{storeId}
+        ORDER BY r.created_datetime DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 사용자 리뷰 목록 조회 (페이징) -->
+    <select id="selectUserReviews" resultMap="reviewResultMap">
+        SELECT r.idx,
+               r.store_id,
+               r.user_id,
+               r.order_order_id,
+               r.rating,
+               r.images,
+               r.content,
+               r.created_datetime,
+               r.modified_datetime,
+               s.name      as store_name,
+               s.category  as store_category,
+               s.image_url as store_image_url,
+               u.name      as user_name
+        FROM tb_review r
+                 INNER JOIN tb_store s ON r.store_id = s.id
+                 LEFT JOIN tb_user u ON CAST(r.user_id AS CHAR) COLLATE utf8mb4_general_ci = u.id
+        WHERE r.user_id = #{userId}
+        ORDER BY r.created_datetime DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 매장 리뷰 수 조회 -->
+    <select id="countStoreReviews" parameterType="long" resultType="long">
+        SELECT COUNT(*)
+        FROM tb_review
+        WHERE store_id = #{storeId}
+    </select>
+
+    <!-- 사용자 리뷰 수 조회 -->
+    <select id="countUserReviews" parameterType="string" resultType="long">
+        SELECT COUNT(*)
+        FROM tb_review
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- 리뷰 상세 조회 -->
+    <select id="selectReviewById" parameterType="long" resultMap="reviewResultMap">
+        SELECT r.idx,
+               r.store_id,
+               r.user_id,
+               r.order_order_id,
+               r.rating,
+               r.images,
+               r.content,
+               r.created_datetime,
+               r.modified_datetime,
+               s.name      as store_name,
+               s.category  as store_category,
+               s.image_url as store_image_url,
+               u.name      as user_name
+        FROM tb_review r
+                 INNER JOIN tb_store s ON r.store_id = s.id
+                 LEFT JOIN tb_user u ON CAST(r.user_id AS CHAR) COLLATE utf8mb4_general_ci = u.id
+        WHERE r.idx = #{reviewId}
+    </select>
+
+    <!-- 리뷰 작성 -->
+    <insert id="insertReview" parameterType="com.winter.winter_back.domain.review.dto.ReviewDto"
+            useGeneratedKeys="true" keyProperty="idx">
+        INSERT INTO tb_review (store_id,
+                               user_id,
+                               order_order_id,
+                               rating,
+                               content,
+                               images,
+                               created_datetime,
+                               modified_datetime)
+        VALUES (#{storeId},
+                #{userId},
+                #{orderOrderId},
+                #{rating},
+                #{content},
+                #{images},
+                #{createdDatetime},
+                #{modifiedDatetime})
+    </insert>
+
+    <!-- 리뷰 수정 -->
+    <update id="updateReview" parameterType="com.winter.winter_back.domain.review.dto.ReviewDto">
+        UPDATE tb_review
+        SET rating            = #{rating},
+            content           = #{content},
+            images            = #{images},
+            modified_datetime = #{modifiedDatetime}
+        WHERE idx = #{idx}
+    </update>
+
+    <!-- 리뷰 삭제 -->
+    <delete id="deleteReview" parameterType="long">
+        DELETE
+        FROM tb_review
+        WHERE idx = #{reviewId}
+    </delete>
+
+    <!-- 매장 평균 평점 조회 -->
+    <select id="getStoreAverageRating" parameterType="long" resultType="double">
+        SELECT COALESCE(AVG(CAST(rating AS DECIMAL(3, 2))), 0.0)
+        FROM tb_review
+        WHERE store_id = #{storeId}
+    </select>
+
+    <!-- 매장 리뷰 통계 조회 -->
+    <select id="selectStoreReviewStats" parameterType="long" resultMap="reviewStatsResultMap">
+        SELECT #{storeId}                                        as store_id,
+               COUNT(*)                                          as total_reviews,
+               COALESCE(AVG(CAST(rating AS DECIMAL(3, 2))), 0.0) as average_rating,
+               SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END)       as rating_5_count,
+               SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END)       as rating_4_count,
+               SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END)       as rating_3_count,
+               SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END)       as rating_2_count,
+               SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END)       as rating_1_count
+        FROM tb_review
+        WHERE store_id = #{storeId}
+    </select>
+
+    <!-- 주문 리뷰 존재 여부 확인 -->
+    <select id="existsReviewByOrderId" parameterType="map" resultType="boolean">
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+        FROM tb_review
+        WHERE user_id = #{userId}
+          AND order_order_id = #{orderOrderId}
+    </select>
+
+    <!-- 매장의 모든 리뷰 삭제 -->
+    <delete id="deleteAllReviewsByStoreId" parameterType="long">
+        DELETE
+        FROM tb_review
+        WHERE store_id = #{storeId}
+    </delete>
+
+    <!-- 사용자의 모든 리뷰 삭제 -->
+    <delete id="deleteAllReviewsByUserId" parameterType="long">
+        DELETE
+        FROM tb_review
+        WHERE user_id = #{userId}
+    </delete>
+
+</mapper>
