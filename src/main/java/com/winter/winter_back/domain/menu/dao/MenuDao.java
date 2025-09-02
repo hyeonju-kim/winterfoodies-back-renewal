@@ -21,6 +21,17 @@ import java.util.List;
 @Mapper
 public interface MenuDao {
 
+    MenuDto findById(Long id);
+    List<MenuDto> findByStoreId(Long storeId);
+    List<MenuDto> findByCategoryId(Long categoryId);
+    List<MenuDto> findByStoreIdAndCategoryId(@Param("storeId") Long storeId,
+                                             @Param("categoryId") Long categoryId);
+    Long insert(MenuDto menu);
+    void update(MenuDto menu);
+    void deleteById(Long id);
+    void updateStatus(@Param("id") Long id, @Param("status") String status);
+
+
     // 카테고리별 메뉴 조회
     List<MenuDto> findMenusByCategory(@Param("categoryId") Long categoryId);
 
