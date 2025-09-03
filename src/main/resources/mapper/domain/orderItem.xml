@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.winter.winter_back.domain.order.dao.OrderItemDao">
+
+    <!-- ResultMap 정의 -->
+    <resultMap id="OrderItemDtoMap" type="com.winter.winter_back.domain.order.dto.OrderItemDto">
+        <id property="orderItemId" column="order_item_id"/>
+        <result property="orderId" column="order_id"/>
+        <result property="menuId" column="menu_id"/>
+        <result property="menuName" column="menu_name"/>
+        <result property="quantity" column="quantity"/>
+        <result property="price" column="price"/>
+        <result property="specialRequest" column="special_request"/>
+        <result property="createdDatetime" column="created_datetime"/>
+    </resultMap>
+
+    <resultMap id="OrderDetailItemMap" type="com.winter.winter_back.domain.order.dto.OrderDetailResponse$OrderItem">
+        <result property="menuId" column="menu_id"/>
+        <result property="menuName" column="menu_name"/>
+        <result property="menuImage" column="menu_image"/>
+        <result property="quantity" column="quantity"/>
+        <result property="price" column="price"/>
+        <result property="totalPrice" column="total_price"/>
+        <result property="specialRequest" column="special_request"/>
+    </resultMap>
+
+    <!-- 주문 항목 생성 -->
+    <insert id="insertOrderItem" parameterType="com.winter.winter_back.domain.order.dto.OrderItemDto" useGeneratedKeys="true" keyProperty="orderItemId">
+        INSERT INTO tb_order_items (
+            order_id,
+            menu_id,
+            quantity,
+            price,
+            special_request,
+            created_datetime
+        ) VALUES (
+                     #{orderId},
+                     #{menuId},
+                     #{quantity},
+                     #{price},
+                     #{specialRequest},
+                     NOW()
+                 )
+    </insert>
+
+    <!-- 주문의 항목들 조회 (상세 정보용) -->
+    <select id="selectOrderItems" parameterType="string" resultMap="OrderDetailItemMap">
+        SELECT
+            oi.menu_id,
+            m.name as menu_name,
+            m.image_url as menu_image,
+            oi.quantity,
+            oi.price,
+            (oi.quantity * oi.price) as total_price,
+            oi.special_request
+        FROM tb_order_items oi
+                 JOIN tb_menus m ON oi.menu_id = m.id
+        WHERE oi.order_id = #{orderId}
+        ORDER BY oi.order_item_id
+    </select>
+
+    <!-- 주문 ID로 항목들 조회 -->
+    <select id="selectOrderItemsByOrderId" parameterType="string" resultMap="OrderItemDtoMap">
+        SELECT
+            oi.order_item_id,
+            oi.order_id,
+            oi.menu_id,
+            m.name as menu_name,
+            oi.quantity,
+            oi.price,
+            oi.special_request,
+            oi.created_datetime
+        FROM tb_order_items oi
+                 JOIN tb_menus m ON oi.menu_id = m.id
+        WHERE oi.order_id = #{orderId}
+        ORDER BY oi.order_item_id
+    </select>
+
+    <!-- 주문 항목 업데이트 -->
+    <update id="updateOrderItem" parameterType="com.winter.winter_back.domain.order.dto.OrderItemDto">
+        UPDATE tb_order_items
+        SET
+            quantity = #{quantity},
+            price = #{price},
+            special_request = #{specialRequest}
+        WHERE order_item_id = #{orderItemId}
+    </update>
+
+    <!-- 주문 항목 삭제 -->
+    <delete id="deleteOrderItem" parameterType="long">
+        DELETE FROM tb_order_items
+        WHERE order_item_id = #{orderItemId}
+    </delete>
+
+    <!-- 주문의 모든 항목 삭제 -->
+    <delete id="deleteOrderItemsByOrderId" parameterType="string">
+        DELETE FROM tb_order_items
+        WHERE order_id = #{orderId}
+    </delete>
+
+</mapper>

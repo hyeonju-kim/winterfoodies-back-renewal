@@ -1,5 +1,13 @@
 package com.winter.winter_back.domain.order.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 /**
  * description    :
  * fileName       : OrderListResponse
@@ -10,5 +18,18 @@ package com.winter.winter_back.domain.order.dto;
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class OrderListResponse {
+    private String orderId;
+    private String storeName;
+    private String storeImage;
+    private String status;
+    private String statusDescription;
+    private BigDecimal totalAmount;
+    private Integer itemCount;
+    private LocalDateTime orderedAt;
+    private String estimatedTime;
 }

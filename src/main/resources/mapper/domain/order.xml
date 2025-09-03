@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.winter.winter_back.domain.order.dao.OrderDao">
+
+    <!-- ResultMap 정의 -->
+    <resultMap id="OrderDtoMap" type="com.winter.winter_back.domain.order.dto.OrderDto">
+        <id property="idx" column="idx"/>
+        <result property="orderId" column="order_id"/>
+        <result property="storeId" column="store_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="reviewId" column="review_id"/>
+        <result property="processYn" column="process_yn"/>
+        <result property="message" column="message"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="deliveryFee" column="delivery_fee"/>
+        <result property="orderRequest" column="order_request"/>
+        <result property="status" column="status"/>
+        <result property="paymentMethod" column="payment_method"/>
+        <result property="createdDatetime" column="created_datetime"/>
+        <result property="updatedDatetime" column="updated_datetime"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="updatedBy" column="updated_by"/>
+        <association property="deliveryInfo" javaType="com.winter.winter_back.domain.order.dto.DeliveryInfoDto">
+            <result property="address" column="delivery_address"/>
+            <result property="detailAddress" column="delivery_detail_address"/>
+            <result property="phone" column="delivery_phone"/>
+            <result property="deliveryRequest" column="delivery_request"/>
+        </association>
+    </resultMap>
+
+    <resultMap id="OrderListResponseMap" type="com.winter.winter_back.domain.order.dto.OrderListResponse">
+        <result property="orderId" column="order_id"/>
+        <result property="storeName" column="store_name"/>
+        <result property="storeImage" column="store_image"/>
+        <result property="status" column="status"/>
+        <result property="statusDescription" column="status_description"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="itemCount" column="item_count"/>
+        <result property="orderedAt" column="created_datetime"/>
+        <result property="estimatedTime" column="estimated_time"/>
+    </resultMap>
+
+    <resultMap id="OrderDetailResponseMap" type="com.winter.winter_back.domain.order.dto.OrderDetailResponse">
+        <result property="orderId" column="order_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="storeId" column="store_id"/>
+        <result property="storeName" column="store_name"/>
+        <result property="storePhone" column="store_phone"/>
+        <result property="storeAddress" column="store_address"/>
+        <result property="status" column="status"/>
+        <result property="statusDescription" column="status_description"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="deliveryFee" column="delivery_fee"/>
+        <result property="paymentMethod" column="payment_method"/>
+        <result property="orderRequest" column="order_request"/>
+        <result property="orderedAt" column="created_datetime"/>
+        <result property="estimatedTime" column="estimated_time"/>
+        <association property="deliveryInfo" javaType="com.winter.winter_back.domain.order.dto.DeliveryInfoDto">
+            <result property="address" column="delivery_address"/>
+            <result property="detailAddress" column="delivery_detail_address"/>
+            <result property="phone" column="delivery_phone"/>
+            <result property="deliveryRequest" column="delivery_request"/>
+        </association>
+    </resultMap>
+
+    <!-- 주문 생성 -->
+    <insert id="insertOrder" parameterType="com.winter.winter_back.domain.order.dto.OrderDto">
+        INSERT INTO tb_order (order_id,
+                              store_id,
+                              user_id,
+                              total_amount,
+                              delivery_fee,
+                              order_request,
+                              status,
+                              payment_method,
+                              delivery_address,
+                              delivery_detail_address,
+                              delivery_phone,
+                              delivery_request,
+                              created_datetime,
+                              created_by)
+        VALUES (#{orderId},
+                #{storeId},
+                #{userId},
+                #{totalAmount},
+                #{deliveryFee},
+                #{orderRequest},
+                #{status},
+                #{paymentMethod},
+                #{deliveryInfo.address},
+                #{deliveryInfo.detailAddress},
+                #{deliveryInfo.phone},
+                #{deliveryInfo.deliveryRequest},
+                #{createdDatetime},
+                #{createdBy})
+    </insert>
+
+    <!-- 주문 ID로 조회 -->
+    <select id="selectOrderById" parameterType="string" resultMap="OrderDtoMap">
+        SELECT idx,
+               order_id,
+               store_id,
+               user_id,
+               review_id,
+               process_yn,
+               message,
+               total_amount,
+               delivery_fee,
+               order_request,
+               status,
+               payment_method,
+               delivery_address,
+               delivery_detail_address,
+               delivery_phone,
+               delivery_request,
+               created_datetime,
+               updated_datetime,
+               created_by,
+               updated_by
+        FROM tb_order
+        WHERE order_id = #{orderId}
+    </select>
+
+    <!-- 주문 목록 조회 -->
+    <select id="selectOrderList" resultMap="OrderListResponseMap">
+        SELECT
+        o.order_id,
+        s.name as store_name,
+        s.image_url as store_image,
+        o.status,
+        CASE
+        WHEN o.status = 'PENDING' THEN '주문 접수 대기중'
+        WHEN o.status = 'CONFIRMED' THEN '주문 확인됨'
+        WHEN o.status = 'PREPARING' THEN '음식 준비중'
+        WHEN o.status = 'DELIVERING' THEN '배달중'
+        WHEN o.status = 'DELIVERED' THEN '배달 완료'
+        WHEN o.status = 'CANCELLED' THEN '주문 취소됨'
+        ELSE '확인 중'
+        END as status_description,
+        o.total_amount,
+        (SELECT COUNT(*) FROM tb_order_items WHERE order_id = o.order_id) as item_count,
+        o.created_datetime,
+        CASE
+        WHEN o.status = 'PENDING' THEN '주문 접수 대기중'
+        WHEN o.status = 'CONFIRMED' THEN '30분 - 40분'
+        WHEN o.status = 'PREPARING' THEN '20분 - 30분'
+        WHEN o.status = 'DELIVERING' THEN '10분 - 15분'
+        WHEN o.status = 'DELIVERED' THEN '배달 완료'
+        WHEN o.status = 'CANCELLED' THEN '주문 취소됨'
+        ELSE '확인 중'
+        END as estimated_time
+        FROM tb_order o
+        JOIN tb_store s ON o.store_id = s.id
+        WHERE o.user_id = #{userId}
+        <if test="status != null and status != 'all'">
+            AND o.status = #{status}
+        </if>
+        ORDER BY o.created_datetime DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 주문 개수 조회 -->
+    <select id="selectOrderCount" resultType="int">
+        SELECT COUNT(*)
+        FROM tb_order
+        WHERE user_id = #{userId}
+        <if test="status != null and status != 'all'">
+            AND status = #{status}
+        </if>
+    </select>
+
+    <!-- 주문 상세 조회 -->
+    <select id="selectOrderDetail" parameterType="string" resultMap="OrderDetailResponseMap">
+        SELECT o.order_id,
+               o.user_id,
+               o.store_id,
+               s.name    as store_name,
+               s.phone   as store_phone,
+               s.address as store_address,
+               o.status,
+               CASE
+                   WHEN o.status = 'PENDING' THEN '주문 접수 대기중'
+                   WHEN o.status = 'CONFIRMED' THEN '주문 확인됨'
+                   WHEN o.status = 'PREPARING' THEN '음식 준비중'
+                   WHEN o.status = 'DELIVERING' THEN '배달중'
+                   WHEN o.status = 'DELIVERED' THEN '배달 완료'
+                   WHEN o.status = 'CANCELLED' THEN '주문 취소됨'
+                   ELSE '확인 중'
+                   END   as status_description,
+               o.total_amount,
+               o.delivery_fee,
+               o.payment_method,
+               o.order_request,
+               o.delivery_address,
+               o.delivery_detail_address,
+               o.delivery_phone,
+               o.delivery_request,
+               o.created_datetime,
+               CASE
+                   WHEN o.status = 'PENDING' THEN '주문 접수 대기중'
+                   WHEN o.status = 'CONFIRMED' THEN '30분 - 40분'
+                   WHEN o.status = 'PREPARING' THEN '20분 - 30분'
+                   WHEN o.status = 'DELIVERING' THEN '10분 - 15분'
+                   WHEN o.status = 'DELIVERED' THEN '배달 완료'
+                   WHEN o.status = 'CANCELLED' THEN '주문 취소됨'
+                   ELSE '확인 중'
+                   END   as estimated_time
+        FROM tb_order o
+                 JOIN tb_store s ON o.store_id = s.id
+        WHERE o.order_id = #{orderId}
+    </select>
+
+    <!-- 주문 상태 업데이트 -->
+    <update id="updateOrderStatus">
+        UPDATE tb_order
+        SET status           = #{status},
+            updated_datetime = NOW()
+        WHERE order_id = #{orderId}
+    </update>
+
+    <!-- 주문 업데이트 -->
+    <update id="updateOrder" parameterType="com.winter.winter_back.domain.order.dto.OrderDto">
+        UPDATE tb_order
+        SET status           = #{status},
+            process_yn       = #{processYn},
+            message          = #{message},
+            updated_datetime = NOW(),
+            updated_by       = #{updatedBy}
+        WHERE order_id = #{orderId}
+    </update>
+
+    <!-- 주문 삭제 -->
+    <delete id="deleteOrder" parameterType="string">
+        DELETE
+        FROM tb_order
+        WHERE order_id = #{orderId}
+    </delete>
+
+</mapper>
