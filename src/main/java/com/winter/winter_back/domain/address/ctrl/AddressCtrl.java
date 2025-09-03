@@ -24,7 +24,7 @@ import javax.validation.Valid;
 
 
 @RestController
-@RequestMapping("/addr")
+@RequestMapping("/addresses")
 @RequiredArgsConstructor
 @Slf4j
 public class AddressCtrl {

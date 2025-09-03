@@ -57,30 +57,51 @@
         </where>
     </select>
 
-    <select id="searchStoresWithDistance" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
+
+    <select id="searchStoresWithDistance" parameterType="com.winter.winter_back.domain.store.dto.StoreSearchRequest" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
         SELECT s.*,
-               ss.average_rating as averageRating,
-               ss.total_reviews as reviewCount,
-               (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
-                                * cos(radians(s.longitude) - radians(#{lng}))
-                   + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance,
-               CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
+        ss.average_rating as averageRating,
+        ss.total_reviews as reviewCount,
+        <choose>
+            <when test="lat != null and lng != null">
+                (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
+                * cos(radians(s.longitude) - radians(#{lng}))
+                + sin(radians(#{lat})) * sin(radians(s.latitude)))) AS distance,
+            </when>
+            <otherwise>
+                0 AS distance,
+            </otherwise>
+        </choose>
+        CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
         FROM tb_store s
-                 LEFT JOIN tb_store_stats ss ON s.id = ss.store_id
-        WHERE s.name LIKE CONCAT('%', #{keyword}, '%')
-           OR s.description LIKE CONCAT('%', #{keyword}, '%')
+        LEFT JOIN tb_store_stats ss ON s.id = ss.store_id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (s.name LIKE CONCAT('%', #{keyword}, '%')
+                OR s.description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
         ORDER BY distance ASC
-        LIMIT #{size} OFFSET #{page}
+        LIMIT #{size} OFFSET #{offset}
     </select>
 
     <select id="countSearchStoresWithDistance" resultType="long">
         SELECT COUNT(*)
         FROM tb_store s
-        WHERE s.name LIKE CONCAT('%', #{keyword}, '%')
-           OR s.description LIKE CONCAT('%', #{keyword}, '%')
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (s.name LIKE CONCAT('%', #{keyword}, '%')
+                OR s.description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+
     </select>
 
     <select id="findPopularStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
+        /*
+        SQL ID: findPopularStores
+        SQL 명: 인기 매장 조회 (총 주문 수, 평점 순으로 조회)
+        */
         SELECT s.*,
                ss.average_rating as averageRating,
                ss.total_reviews as reviewCount,

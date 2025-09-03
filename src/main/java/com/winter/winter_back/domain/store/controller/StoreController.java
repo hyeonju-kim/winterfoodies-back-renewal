@@ -38,6 +38,8 @@ public class StoreController {
      */
     @GetMapping("/search")
     public StoreListResponse searchStores(@ModelAttribute StoreSearchRequest request) {
+        log.info("[searchStores] > [request] === {}", request);
+
         return storeService.searchStores(request);
     }
 
