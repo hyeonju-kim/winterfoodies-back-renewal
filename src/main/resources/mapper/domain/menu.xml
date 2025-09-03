@@ -169,6 +169,91 @@
           AND m.is_active = TRUE
     </select>
 
+
+    <!-- 메뉴 ID로 상세 조회 -->
+    <select id="selectMenuById" parameterType="java.lang.Long" resultMap="menuResultMap">
+        SELECT
+            m.id,
+            m.store_id,
+            m.category_id,
+            m.name,
+            m.description,
+            m.price,
+            m.original_price,
+            m.image_url,
+            m.is_popular,
+            m.is_recommended,
+            m.is_sold_out,
+            m.is_active,
+            m.sort_order,
+            m.calories,
+            m.ingredients,
+            m.allergens,
+            m.spice_level,
+            m.preparation_time,
+            m.created_at,
+            m.updated_at,
+            c.name as category_name,
+            s.name as store_name
+        FROM tb_menus m
+                 LEFT JOIN tb_menu_category c ON m.category_id = c.id
+                 LEFT JOIN tb_store s ON m.store_id = s.id
+        WHERE m.id = #{menuId}
+          AND m.is_active = 1
+    </select>
+
+    <!-- 매장별 메뉴 목록 조회 -->
+    <select id="selectMenusByStoreId" parameterType="java.lang.Long" resultMap="menuResultMap">
+        SELECT
+            m.id,
+            m.store_id,
+            m.category_id,
+            m.name,
+            m.description,
+            m.price,
+            m.original_price,
+            m.image_url,
+            m.is_popular,
+            m.is_recommended,
+            m.is_sold_out,
+            m.is_active,
+            m.sort_order,
+            c.name as category_name
+        FROM tb_menus m
+                 LEFT JOIN tb_menu_category c ON m.category_id = c.id
+        WHERE m.store_id = #{storeId}
+          AND m.is_active = 1
+        ORDER BY m.sort_order ASC, m.id ASC
+    </select>
+
+    <!-- 매장의 카테고리별 메뉴 목록 조회 -->
+    <select id="selectMenusByStoreIdAndCategoryId" resultMap="menuResultMap">
+        SELECT
+        m.id,
+        m.store_id,
+        m.category_id,
+        m.name,
+        m.description,
+        m.price,
+        m.original_price,
+        m.image_url,
+        m.is_popular,
+        m.is_recommended,
+        m.is_sold_out,
+        m.is_active,
+        m.sort_order,
+        c.name as category_name
+        FROM tb_menus m
+        LEFT JOIN tb_menu_category c ON m.category_id = c.id
+        WHERE m.store_id = #{storeId}
+        <if test="categoryId != null">
+            AND m.category_id = #{categoryId}
+        </if>
+        AND m.is_active = 1
+        ORDER BY m.sort_order ASC, m.id ASC
+    </select>
+
+
     <!-- 메뉴 등록 -->
     <insert id="insertMenu" parameterType="com.winter.winter_back.domain.menu.dto.MenuDto" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_menus (

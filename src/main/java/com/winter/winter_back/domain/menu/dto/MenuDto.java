@@ -27,6 +27,7 @@ public class MenuDto extends BaseDto {
     private Long id;
     private Long storeId;
     private Long categoryId;
+    private String categoryName;
     private String name;
     private String description;
     private Integer price;

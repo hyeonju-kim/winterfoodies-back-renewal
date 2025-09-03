@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.winter.winter_back.domain.category.dao.CategoryDao">
+
+    <!-- 결과 매핑 -->
+    <resultMap id="categoryResultMap" type="com.winter.winter_back.domain.category.dto.CategoryDto">
+        <id column="id" property="id" />
+        <result column="store_id" property="storeId" />
+        <result column="name" property="name" />
+        <result column="description" property="description" />
+        <result column="sort_order" property="sortOrder" />
+        <result column="is_active" property="isActive" />
+        <result column="created_at" property="createdAt" />
+        <result column="updated_at" property="updatedAt" />
+    </resultMap>
+
+    <!-- 모든 활성화된 메뉴 카테고리 조회 -->
+    <select id="selectAllActiveMenuCategories" resultMap="categoryResultMap">
+        SELECT
+            id,
+            store_id,
+            name,
+            description,
+            sort_order,
+            is_active,
+            created_at,
+            updated_at
+        FROM tb_menu_category
+        WHERE is_active = 1
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <!-- 카테고리 ID로 조회 -->
+    <select id="selectMenuCategoryById" parameterType="java.lang.Long" resultMap="categoryResultMap">
+        SELECT
+            id,
+            store_id,
+            name,
+            description,
+            sort_order,
+            is_active,
+            created_at,
+            updated_at
+        FROM tb_menu_category
+        WHERE id = #{categoryId}
+          AND is_active = 1
+    </select>
+
+</mapper>

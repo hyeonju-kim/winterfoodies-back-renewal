@@ -56,6 +56,22 @@ public interface MenuDao {
     // 메뉴 검색
     List<MenuDto> searchMenus(@Param("storeId") Long storeId, @Param("keyword") String keyword);
 
+    /**
+     * 메뉴 ID로 상세 조회
+     */
+    MenuDto selectMenuById(@Param("menuId") Long menuId);
+
+    /**
+     * 매장별 메뉴 목록 조회
+     */
+    List<MenuDto> selectMenusByStoreId(@Param("storeId") Long storeId);
+
+    /**
+     * 매장의 카테고리별 메뉴 목록 조회
+     */
+    List<MenuDto> selectMenusByStoreIdAndCategoryId(@Param("storeId") Long storeId,
+                                                    @Param("categoryId") Long categoryId);
+
     // CRUD
     void insertMenu(MenuDto menu);
     void updateMenu(MenuDto menu);
