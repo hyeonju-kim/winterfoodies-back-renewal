@@ -55,8 +55,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception { // 스프링이 구동될 때 바로 호출되는 부분 (Spring Security가 SecurityFilterChain 만들기 위해 제일 먼저 호출, 이 Chain이 DispatcherServlet 앞단에 필터로 등록되고 이후 모든 HTTP 요청은 이 필터체인을 거침)
         // 2-1) 인증 없이 접근 가능한 URL
         http.authorizeRequests()
-                .antMatchers(comSecurityInfoDto.getPermitAllUrlPatterns()).permitAll(); // 누구든 접근 허용
-
+                .antMatchers(comSecurityInfoDto.getPermitAllUrlPatterns()).permitAll() // 누구든 접근 허용
+                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll(); // CORS Preflight 요청은 무조건 허용
 
         // 2-2) 역할 기반으로 URL 패턴을 동적으로 구성
         Map<String, HashSet<String>> roleApiAuthMap = securitySupportSvc.getRoleApiAuthMapgForSpringSecurity("MGMT"); // 관리자용 (Management)
@@ -100,6 +100,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 //                .securityContext()
 //                	.securityContextRepository(customSecurityContextRepository()) // 여기에 커스텀 SecurityContextRepository를 설정 240807
 //                	.and()
+                .cors() // 플러터 CORS 에러로 추가 250915
+                .and()
                 .csrf().disable() // CSRF 보호 비활성화
                 .sessionManagement() // 세션 관리
                     .maximumSessions(1) // 하나의 세션만 허용
