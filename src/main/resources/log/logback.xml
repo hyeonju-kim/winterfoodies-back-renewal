@@ -29,7 +29,7 @@
 
     <!-- 좀 더 보기 좋은 MyBatis 쿼리 Log : log4jdbc -->
     <logger name="jdbc.sqlonly" level="debug" />
-    <logger name="jdbc.sqltiming" level="off" /> <!-- 실행된 SQL + 바인딩된 값 + 실행시간 -->
+    <logger name="jdbc.sqltiming" level="debug" /> <!-- 실행된 SQL + 바인딩된 값 + 실행시간 -->
     <logger name="jdbc.audit" level="off" />
     <logger name="jdbc.resultset" level="off" />
     <logger name="jdbc.resultsettable" level="debug" /> <!-- 결과 ResultSet 테이블 형식으로 출력 -->

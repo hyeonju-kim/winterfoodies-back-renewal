@@ -27,13 +27,13 @@
                 ORDER BY distance ASC
             </when>
             <when test="sort == 'rating'">
-                ORDER BY ss.average_rating DESC, distance ASC
+                ORDER BY ss.average_rating DESC
             </when>
-            <when test="sort == 'popular'">
-                ORDER BY ss.total_orders DESC, ss.average_rating DESC
+            <when test="sort == 'order'">
+                ORDER BY ss.total_orders DESC
             </when>
-            <when test="sort == 'name'">
-                ORDER BY s.name ASC
+            <when test="sort == 'review'">
+                ORDER BY ss.total_reviews DESC
             </when>
             <otherwise>
                 ORDER BY distance ASC

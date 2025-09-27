@@ -23,7 +23,7 @@ public class StoreSearchRequest {
     private String keyword;
     private String category;
     @Builder.Default
-    private String sort = "distance"; // distance, rating, popular, name
+    private String sort = "distance"; // distance(거리순), rating(평점순), order(주문많은순), review(리뷰순)
     private Double lat;
     private Double lng;
     @Builder.Default
