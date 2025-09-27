@@ -37,7 +37,7 @@ public class UserController {
 
 
     /**
-     * 내 정보 조회 (시큐리티컨텍스트에서 조회)
+     * 내 정보 조회 (시큐리티컨텍스트에서 조회) -> 토큰 형식으로 변경함
      */
     @GetMapping("/me")
     public UserDto getCurrentUser(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo) {
@@ -47,6 +47,7 @@ public class UserController {
 
         log.info("[getCurrentUser] > [userId] === {}", loginUserInfo.getUserId());
         log.info("[getCurrentUser] > [userNm] === {}", loginUserInfo.getUserNm());
+        log.info("[getCurrentUser] > [tel] === {}", loginUserInfo.getTel());
 
         // 이미 모든 사용자 정보가 들어있으니 DB 조회 없이 바로 변환
         UserDto userDto = new UserDto();

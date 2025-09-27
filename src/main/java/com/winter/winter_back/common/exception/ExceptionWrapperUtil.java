@@ -14,6 +14,7 @@ import org.springframework.util.StringUtils;
 import javax.annotation.PostConstruct;
 import java.text.MessageFormat;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 @Slf4j
 @Component
@@ -46,7 +47,7 @@ public class ExceptionWrapperUtil  { // 240103 hjkim 익셉션 처리를 감싸�
     }
 
     public ResponseBaseDto<Object> makeResponse(String type) {
-        return makeResponse(type, null);
+        return makeResponse(type, (String[]) null);
     }
 
     public ResponseBaseDto<Object> makeResponse(String type, String[] params){
@@ -69,5 +70,13 @@ public class ExceptionWrapperUtil  { // 240103 hjkim 익셉션 처리를 감싸�
                 MessageFormat.format(String.valueOf(excepInfo.get(BaseConstant.RES_DESC)), params),
                 Integer.valueOf(String.valueOf(excepInfo.get(BaseConstant.RES_STATUS)))
         );
+    }
+
+    // List<String> 매개변수를 받는 오버로드 메서드 추가
+    public ResponseBaseDto<Object> makeResponse(String type, List<String> params){
+        if (params == null || params.isEmpty()) {
+            return makeResponse(type, (String[]) null);
+        }
+        return makeResponse(type, params.toArray(new String[0]));
     }
 }

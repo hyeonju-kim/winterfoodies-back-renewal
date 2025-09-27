@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Map;
 
@@ -34,6 +35,21 @@ public class AuthLoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandl
 	public void onAuthenticationSuccess(HttpServletRequest request,
 										HttpServletResponse response,
 										Authentication authentication) throws ServletException, IOException {
+
+        // 세션 생성 및 확인
+        HttpSession session = request.getSession(true);
+        log.info("세션 아이디 : {}", session.getId());
+        log.info("세션 쿠키 이름: {}", session.getServletContext().getSessionCookieConfig().getName());
+        log.info("세션 최대 비활성 시간: {}", session.getMaxInactiveInterval());
+
+        // 응답 설정
+        response.setStatus(HttpServletResponse.SC_OK);
+        response.setContentType("application/json;charset=UTF-8");
+
+        // CORS 헤더 추가
+        response.setHeader("Access-Control-Allow-Credentials", "true");
+
+
 		// 인증된 사용자 정보를 가져옴
 		ComLoginUserInfoDto lginUsr = (ComLoginUserInfoDto) authentication.getPrincipal();
 
