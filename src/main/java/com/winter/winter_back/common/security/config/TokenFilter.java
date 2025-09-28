@@ -1,7 +1,5 @@
 package com.winter.winter_back.common.security.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.winter.winter_back.common.dto.ResponseBaseDto;
 import com.winter.winter_back.common.exception.BizException;
 import com.winter.winter_back.common.exception.ExceptionWrapperUtil;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +22,7 @@ import java.io.IOException;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 9. 21.         hj kim             최초 생성
+ * 25. 9. 28.         hj kim             블랙리스트 토큰 처리 추가
  */
 @RequiredArgsConstructor
 @Slf4j
@@ -39,44 +38,41 @@ public class TokenFilter extends OncePerRequestFilter {
         log.info("[doFilterInternal] > [request] === {}", request);
         log.info("[doFilterInternal] > [token] === {}", token);
 
-        try {
-            if (StringUtils.hasText(token)) {
-                int valid = TokenProvider.validToken(token);
-                log.info("[doFilterInternal] > [valid] === {}", valid);
+        if (StringUtils.hasText(token)) {
+            int valid = TokenProvider.validToken(token);
+            log.info("[doFilterInternal] > [valid] === {}", valid);
 
-                switch (valid) {
-                    case 0:
-                        SecurityContextHolder.getContext()
-                                .setAuthentication(TokenProvider.getAuthentication(token));
-                        break;
-                    case -1:
-                        throw new BizException("token_not_build");
-                    case 2:
-                        throw new BizException("token_expire");
-                    case 1:
-                    case 3:
-                    case 4:
-                    default:
-                        throw new BizException("token_wrong");
-                }
+            switch (valid) {
+                case 0:
+                    // 정상 토큰 - 인증 정보 설정
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(TokenProvider.getAuthentication(token));
+                    break;
+                case -1:
+                    // TokenProvider 초기화 안됨
+                    throw new BizException("token_not_build");
+                case 1:
+                    // 잘못된 서명
+                    throw new BizException("token_wrong");
+                case 2:
+                    // 만료된 토큰
+                    throw new BizException("token_expire");
+                case 3:
+                    // 지원하지 않는 토큰
+                    throw new BizException("token_wrong");
+                case 4:
+                    // 잘못된 토큰 형식
+                    throw new BizException("token_wrong");
+                case 5:
+                    // 블랙리스트에 있는 토큰 (로그아웃된 토큰)
+                    log.warn("[TokenFilter] 블랙리스트에 있는 토큰입니다");
+                    throw new BizException("token_blacklisted");
+                default:
+                    // 알 수 없는 오류
+                    throw new BizException("token_wrong");
             }
-
-            filterChain.doFilter(request, response);
-
-        } catch (BizException e) {
-            setErrorResponse(response, exceptionWrapperUtil.makeResponse(e.getType(), e.getOptions()));
-        } catch (Exception e) {
-            log.error("TokenFilter error: ", e);
-            setErrorResponse(response,
-                    exceptionWrapperUtil.makeResponse("INTERNAL_ERROR"));
         }
-    }
 
-    private void setErrorResponse(HttpServletResponse response, ResponseBaseDto responseDto)
-            throws IOException {
-        response.setStatus(responseDto.getStatus());
-        response.setContentType("application/json;charset=UTF-8");
-        ObjectMapper mapper = new ObjectMapper();
-        response.getWriter().write(mapper.writeValueAsString(responseDto));
+        filterChain.doFilter(request, response);
     }
 }

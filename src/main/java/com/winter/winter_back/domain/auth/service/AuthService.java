@@ -261,4 +261,27 @@ public class AuthService {
         // 현재는 빈 리스트 반환 (메뉴 기능 미구현)
         return new ArrayList<>();
     }
+
+
+    /**
+     * 로그아웃 처리 (캐시 및 토큰 무효화)
+     */
+    public void logout(String userId) {
+        try {
+            // 1. 사용자의 모든 토큰 무효화
+            TokenProvider.invalidateAllUserTokens(userId);
+
+            // 2. 캐시에서 토큰 정보 삭제
+            Cache winterCache = cacheManager.getCache("winter_cache");
+            if (winterCache != null) {
+                winterCache.evict(userId);
+                log.info("[logout] 사용자 {}의 캐시 정보가 삭제되었습니다", userId);
+            }
+
+            log.info("[logout] 사용자 {} 로그아웃 완료", userId);
+        } catch (Exception e) {
+            log.error("[logout] 로그아웃 처리 중 오류 발생: {}", e.getMessage());
+            throw new BizException("logout_failed");
+        }
+    }
 }

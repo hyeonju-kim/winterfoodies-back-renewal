@@ -1,220 +1,475 @@
-# success
+# ===================================
+# 윈터푸디스(WinterFoodis) Exception 정의
+# ===================================
+
+# 1. 성공 응답
 success:
   code: 20000000
   desc: "성공"
   status: 200
-# 30001000 공통오류
+
+# ===================================
+# 2. 공통 오류 (30000000번대)
+# ===================================
+
+# 2-1. JSON 처리 오류 (30001xxx)
 com.fasterxml.jackson.core.io.JsonEOFException:
-  code: 30000001
+  code: 30001001
   desc: "JSON 변환 중 문제가 있습니다."
   status: 400
 com.fasterxml.jackson.core.JsonParseException:
-  code: 30000002
+  code: 30001002
   desc: "JSON 변환 중 문제가 있습니다."
   status: 400
 com.fasterxml.jackson.databind.exc.MismatchedInputException:
-  code: 30000003
-  desc: "JSON 변환 중 문제가 있습니다."
-  status: 400
-com.fasterxml.jackson.databind.JsonMappingException:
-  code: 30000004
-  desc: "JSON 변환 중 문제가 있습니다."
-  status: 400
-com.fasterxml.jackson.databind.exc.InvalidDefinitionException:
-  code: 30000005
-  desc: "JSON 변환 중 문제가 있습니다."
-  status: 400
-org.springframework.http.converter.HttpMessageConversionException:
-  code: 30000006
+  code: 30001003
   desc: "JSON 변환 중 문제가 있습니다."
   status: 400
 org.springframework.http.converter.HttpMessageNotReadableException:
-  code: 30000007
+  code: 30001004
   desc: "JSON 변환 중 문제가 있습니다."
   status: 400
+
+# 2-2. 입력값 검증 오류 (30002xxx)
 parameter.validation.error:
-  code: 30000008
-  desc: "입력값 오류 입니다."
+  code: 30002001
+  desc: "입력값 오류입니다."
   status: 400
 org.springframework.validation.BindException:
-  code: 30000009
-  desc: "입력값 오류 입니다."
-  status: 400
-parameter.validation.IllegalArgumentException:
-  code: 30000010
-  desc: "입력값 오류 입니다."
+  code: 30002002
+  desc: "입력값 오류입니다."
   status: 400
 org.springframework.web.bind.MethodArgumentNotValidException:
-  code: 30000011
-  desc: "입력값 오류 입니다."
+  code: 30002003
+  desc: "입력값 오류입니다."
   status: 400
+parameter.validation.IllegalArgumentException:
+  code: 30002004
+  desc: "입력값 오류입니다."
+  status: 400
+
+# 2-3. 요청 오류 (30003xxx)
 org.springframework.web.servlet.NoHandlerFoundException:
-  code: 30000012
-  desc: "지원하지 않는 URL"
+  code: 30003001
+  desc: "지원하지 않는 URL입니다."
   status: 404
+org.springframework.web.HttpRequestMethodNotSupportedException:
+  code: 30003002
+  desc: "잘못된 요청 방식입니다."
+  status: 405
 code_not_found:
-  code: 30000013
-  desc: "지원하지 않는 {0} 입니다."
+  code: 30003003
+  desc: "지원하지 않는 {0}입니다."
   status: 400
+
+# ===================================
+# 3. 인증/권한 오류 (40000000번대)
+# ===================================
+
+# 3-1. 인증 오류 (40001xxx)
 login_required:
-  code: 40000001
+  code: 40001001
   desc: "로그인 후 시도해주세요."
   status: 401
 login_fail:
-  code: 40000001
-  desc: "로그인 실패."
+  code: 40001002
+  desc: "로그인에 실패했습니다."
   status: 401
+invalid_token:
+  code: 40001003
+  desc: "유효하지 않은 토큰입니다."
+  status: 401
+token_expired:
+  code: 40001004
+  desc: "토큰이 만료되었습니다."
+  status: 401
+logout_fail:
+  code: 40001005
+  desc: "로그아웃에 실패했습니다."
+  status: 401
+token_not_build:
+  code: 40001006
+  desc: "토큰 생성이 실패했습니다.(TokenProvider가 초기화되지 않음)"
+  status: 401
+token_wrong:
+  code: 40001007
+  desc: "잘못된 토큰입니다."
+  status: 401
+token_blacklisted:
+  code: 40001008
+  desc: "블랙리스트에 있는 토큰입니다.(로그아웃)"
+  status: 401
+
+
+# 3-2. 권한 오류 (40002xxx)
 permission_denied:
-  code: 40000002
+  code: 40002001
   desc: "권한이 없습니다."
   status: 403
-org.springframework.web.HttpRequestMethodNotSupportedException:
-  code: 40000003
-  desc: "잘못된 요청입니다."
-  status: 405
-data_not_found:
-  code: 40000005
-  desc: "조회결과가 없습니다."
-  status: 400
-cannot_change_use_yn:
-  code: 40000011
-  desc: "사용중인 {0}(은)는 [사용하지 않음]으로 변경할 수 없습니다."
-  status: 500
-invalid-password-pattern:
-  code: 40000012
-  desc: "비밀번호는 숫자,영문,특수문자 포함 8자리 이상만 입력가능합니다"
-  status: 400
-invalid-password:
-  code: 40000013
-  desc: "비밀번호가 일치하지 않습니다."
-  status: 400
+owner_only_access:
+  code: 40002002
+  desc: "소유자만 접근 가능합니다."
+  status: 403
+admin_only_access:
+  code: 40002003
+  desc: "관리자만 접근 가능합니다."
+  status: 403
+
+# ===================================
+# 4. 데이터 오류 (41000000번대)
+# ===================================
+
+# 4-1. CRUD 오류 (41001xxx)
 fail_add:
-  code: 41000001
+  code: 41001001
   desc: "등록에 실패했습니다."
   status: 500
 fail_update:
-  code: 41000002
+  code: 41001002
   desc: "수정에 실패했습니다."
   status: 500
 fail_remove:
-  code: 41000003
+  code: 41001003
   desc: "삭제에 실패했습니다."
   status: 500
-duplicated:
-  code: 41000004
-  desc: "동일한 {0}(이)가 존재합니다."
-  status: 409
-check_foreign_key:
-  code: 41000005
-  desc: "{0}(이)가 존재합니다. 삭제할 수 없습니다."
-  status: 500
-fileUpload.ConvertFail:
-  code: 42000001
-  desc: "첨부파일 업로드 처리중 오류가 발생했습니다."
-  status: 500
-fileUpload.InvalidAppendndfileKind:
-  code: 42000002
-  desc: "등록되지 않은 첨부파일유형코드입니다."
-  status: 500
-file_oversize:
-  code: 42000003
-  desc: "파일 크기가 {0}를 초과했습니다."
-  status: 500
-org.springframework.web.multipart.MaxUploadSizeExceededException:
-  code: 42000004
-  desc: "파일 크기가 최대 허용 크기를 초과했습니다."
-  status: 500
-file_permission_denied:
-  code: 42000005
-  desc: "지원하지 않는 확장자입니다.\r\n{0}"
-  status: 500
-file_empty:
-  code: 42000006
-  desc: "파일이 존재하지 않습니다."
+data_not_found:
+  code: 41001004
+  desc: "조회 결과가 없습니다."
   status: 404
 data_empty:
-  code: 42000007
+  code: 41001005
   desc: "데이터가 존재하지 않습니다."
   status: 404
-org.springframework.jdbc:
-  code: 49000001
-  desc: "데이터베이스 오류"
+
+# 4-2. 중복/제약 오류 (41002xxx)
+duplicated:
+  code: 41002001
+  desc: "동일한 {0}이(가) 존재합니다."
+  status: 409
+check_foreign_key:
+  code: 41002002
+  desc: "{0}이(가) 사용 중입니다. 삭제할 수 없습니다."
   status: 500
-org.apache.ibatis.reflection.ReflectionException:
-  code: 49000002
-  desc: "데이터베이스 오류"
-  status: 500
-org.springframework.dao.DataAccessException:
-  code: 49000003
-  desc: "데이터베이스 오류"
-  status: 500
-org.apache.ibatis.javassist.NotFoundException:
-  code: 49000004
-  desc: "데이터베이스 오류"
-  status: 500
-# DB 중복키 발생 오류
-org.springframework.dao.DuplicateKeyException:
-  code: 49000005
-  desc: "데이터베이스 오류(중복키 발생)"
-  status: 500
-# DB 외래키 참조 제약(참조하는 외래키 때문에 삭제 및 변경 불가)
-org.springframework.dao.DataIntegrityViolationException:
-  code: 49000006
-  desc: "데이터베이스 오류(외래키 참조 조건)"
-  status: 500
-java.sql.SQLException:
-  code: 49000007
-  desc: "데이터 베이스 SQL 에러."
-  status: 500
-org.springframework.jdbc.BadSqlGrammarException:
-  code: 49000008
-  desc: "데이터베이스 오류({0})"
-  status: 500
-redis:
-  code: 49000009
-  desc: "redis 오류"
-  status: 500
-org.springframework.web.client.HttpStatusCodeException:
-  code: 50000001
-  desc: "존재하지 않는 HTTP STATUS로 응답 받았습니다."
-  status: 500
-java.net.SocketTimeoutException:
-  code: 50000002
-  desc: "시스템으로 부터 응답을 받지 못하였습니다."
-  status: 500
-java.net.ConnectException:
-  code: 50000003
-  desc: "시스템과 Connection 접속에 실패하였습니다."
-  status: 500
-java.net.FileNotFoundException:
-  code: 50000004
-  desc: "시스템에서 파일 다운로드에 실패하였습니다."
-  status: 500
-java.net.UnknownHostException:
-  code: 50000005
-  desc: "DNS 확인 오류"
-  status: 500
-notdefine:
-  code: 40000999
-  desc: "정의되지않은 오류입니다 "
-  status: 500
-# 59000001~ 시스템오류
-unknown:
-  code: 59999999
-  desc: "시스템 오류가 발생했습니다"
-  status: 500
-java.lang.NullPointerException:
-  code: 59000001
-  desc: "시스템 오류가 발생했습니다"
+cannot_change_use_yn:
+  code: 41002003
+  desc: "사용 중인 {0}은(는) [사용하지 않음]으로 변경할 수 없습니다."
   status: 500
 
-# 60000001~ 비즈니스 예외
-invalid_vehicle:
-  code: 60000001
-  desc: "존재하지 않는 차량입니다."
+# ===================================
+# 5. 파일 처리 오류 (42000000번대)
+# ===================================
+
+# 5-1. 파일 업로드 오류 (42001xxx)
+fileUpload.ConvertFail:
+  code: 42001001
+  desc: "파일 업로드 처리 중 오류가 발생했습니다."
+  status: 500
+file_oversize:
+  code: 42001002
+  desc: "파일 크기가 {0}를 초과했습니다."
+  status: 413
+org.springframework.web.multipart.MaxUploadSizeExceededException:
+  code: 42001003
+  desc: "파일 크기가 최대 허용 크기를 초과했습니다."
+  status: 413
+file_permission_denied:
+  code: 42001004
+  desc: "지원하지 않는 파일 형식입니다.\r\n{0}"
+  status: 415
+file_empty:
+  code: 42001005
+  desc: "파일이 존재하지 않습니다."
+  status: 404
+invalid_image_format:
+  code: 42001006
+  desc: "유효하지 않은 이미지 파일입니다."
   status: 400
 
-required_vehicle_id:
-  code: 60000002
-  desc: "vehicleId는 필수입니다."
+# ===================================
+# 6. 사용자 관리 오류 (60000000번대)
+# ===================================
+
+# 6-1. 회원 관련 (60001xxx)
+user_not_found:
+  code: 60001001
+  desc: "존재하지 않는 사용자입니다."
+  status: 404
+user_already_exists:
+  code: 60001002
+  desc: "이미 존재하는 사용자입니다."
+  status: 409
+invalid_password_pattern:
+  code: 60001003
+  desc: "비밀번호는 숫자, 영문, 특수문자 포함 8자리 이상이어야 합니다."
+  status: 400
+invalid_password:
+  code: 60001004
+  desc: "비밀번호가 일치하지 않습니다."
+  status: 400
+invalid_email_format:
+  code: 60001005
+  desc: "올바른 이메일 형식이 아닙니다."
+  status: 400
+invalid_phone_format:
+  code: 60001006
+  desc: "올바른 전화번호 형식이 아닙니다."
+  status: 400
+user_inactive:
+  code: 60001007
+  desc: "비활성화된 사용자입니다."
+  status: 403
+user_suspended:
+  code: 60001008
+  desc: "정지된 사용자입니다."
+  status: 403
+
+# ===================================
+# 7. 음식점 관리 오류 (61000000번대)
+# ===================================
+
+# 7-1. 음식점 관련 (61001xxx)
+restaurant_not_found:
+  code: 61001001
+  desc: "존재하지 않는 음식점입니다."
+  status: 404
+restaurant_closed:
+  code: 61001002
+  desc: "영업이 종료된 음식점입니다."
+  status: 400
+restaurant_not_approved:
+  code: 61001003
+  desc: "승인되지 않은 음식점입니다."
+  status: 403
+restaurant_suspended:
+  code: 61001004
+  desc: "정지된 음식점입니다."
+  status: 403
+invalid_business_hours:
+  code: 61001005
+  desc: "올바르지 않은 영업시간입니다."
+  status: 400
+restaurant_duplicate_name:
+  code: 61001006
+  desc: "동일한 음식점명이 존재합니다."
+  status: 409
+
+# ===================================
+# 8. 메뉴 관리 오류 (62000000번대)
+# ===================================
+
+# 8-1. 메뉴 관련 (62001xxx)
+menu_not_found:
+  code: 62001001
+  desc: "존재하지 않는 메뉴입니다."
+  status: 404
+menu_not_available:
+  code: 62001002
+  desc: "현재 판매하지 않는 메뉴입니다."
+  status: 400
+menu_sold_out:
+  code: 62001003
+  desc: "품절된 메뉴입니다."
+  status: 400
+invalid_menu_price:
+  code: 62001004
+  desc: "올바르지 않은 메뉴 가격입니다."
+  status: 400
+menu_duplicate_name:
+  code: 62001005
+  desc: "동일한 메뉴명이 존재합니다."
+  status: 409
+invalid_menu_category:
+  code: 62001006
+  desc: "올바르지 않은 메뉴 카테고리입니다."
+  status: 400
+
+# 8-2. 메뉴 옵션 관련 (62002xxx)
+menu_option_not_found:
+  code: 62002001
+  desc: "존재하지 않는 메뉴 옵션입니다."
+  status: 404
+invalid_option_price:
+  code: 62002002
+  desc: "올바르지 않은 옵션 가격입니다."
+  status: 400
+required_option_missing:
+  code: 62002003
+  desc: "필수 옵션이 선택되지 않았습니다."
+  status: 400
+option_limit_exceeded:
+  code: 62002004
+  desc: "옵션 선택 개수를 초과했습니다."
+  status: 400
+
+# ===================================
+# 9. 주문 관리 오류 (63000000번대)
+# ===================================
+
+# 9-1. 주문 관련 (63001xxx)
+order_not_found:
+  code: 63001001
+  desc: "존재하지 않는 주문입니다."
+  status: 404
+invalid_order_status:
+  code: 63001002
+  desc: "올바르지 않은 주문 상태입니다."
+  status: 400
+order_already_cancelled:
+  code: 63001003
+  desc: "이미 취소된 주문입니다."
+  status: 400
+order_cannot_cancel:
+  code: 63001004
+  desc: "취소할 수 없는 주문입니다."
+  status: 400
+order_already_completed:
+  code: 63001005
+  desc: "이미 완료된 주문입니다."
+  status: 400
+invalid_order_amount:
+  code: 63001006
+  desc: "올바르지 않은 주문 금액입니다."
+  status: 400
+minimum_order_amount:
+  code: 63001007
+  desc: "최소 주문 금액을 만족하지 않습니다."
+  status: 400
+order_time_exceeded:
+  code: 63001008
+  desc: "주문 가능 시간이 초과되었습니다."
+  status: 400
+
+# 9-2. 장바구니 관련 (63002xxx)
+cart_empty:
+  code: 63002001
+  desc: "장바구니가 비어있습니다."
+  status: 400
+cart_item_not_found:
+  code: 63002002
+  desc: "장바구니에 해당 상품이 없습니다."
+  status: 404
+cart_limit_exceeded:
+  code: 63002003
+  desc: "장바구니 최대 수량을 초과했습니다."
+  status: 400
+different_restaurant_items:
+  code: 63002004
+  desc: "다른 음식점의 메뉴는 함께 주문할 수 없습니다."
+  status: 400
+
+# ===================================
+# 10. 리뷰 관리 오류 (64000000번대)
+# ===================================
+
+# 10-1. 리뷰 관련 (64001xxx)
+review_not_found:
+  code: 64001001
+  desc: "존재하지 않는 리뷰입니다."
+  status: 404
+review_already_exists:
+  code: 64001002
+  desc: "이미 리뷰를 작성했습니다."
+  status: 409
+review_not_allowed:
+  code: 64001003
+  desc: "리뷰 작성 권한이 없습니다."
+  status: 403
+invalid_rating:
+  code: 64001004
+  desc: "올바르지 않은 평점입니다."
+  status: 400
+review_edit_time_expired:
+  code: 64001005
+  desc: "리뷰 수정 가능 시간이 초과되었습니다."
+  status: 400
+
+# ===================================
+# 11. 배송 관리 오류 (65000000번대)
+# ===================================
+
+# 11-1. 배송 관련 (65001xxx)
+delivery_not_found:
+  code: 65001001
+  desc: "존재하지 않는 배송 정보입니다."
+  status: 404
+invalid_delivery_address:
+  code: 65001002
+  desc: "올바르지 않은 배송 주소입니다."
+  status: 400
+delivery_area_not_supported:
+  code: 65001003
+  desc: "배송 불가 지역입니다."
+  status: 400
+invalid_delivery_time:
+  code: 65001004
+  desc: "올바르지 않은 배송 시간입니다."
+  status: 400
+delivery_already_started:
+  code: 65001005
+  desc: "이미 배송이 시작되었습니다."
+  status: 400
+
+
+# ===================================
+# 12. 즐겨찾기 관리 오류 (66000000번대)
+# ===================================
+favorite_already_exists:
+  code: 66001001
+  desc: "이미 즐겨찾기에 추가된 매장입니다."
+  status: 409
+favorite_not_found:
+  code: 65001002
+  desc: "즐겨찾기에서 해당 매장을 찾을 수 없습니다."
+  status: 404
+favorite_add_failed:
+  code: 65001003
+  desc: "즐겨찾기 추가에 실패했습니다."
+  status: 500
+favorite_remove_failed:
+  code: 65001004
+  desc: "즐겨찾기 삭제에 실패했습니다."
+  status: 500
+favorite_limit_exceeded:
+  code: 65001005
+  desc: "즐겨찾기 최대 개수를 초과했습니다."
+  status: 400
+
+
+
+# ===================================
+# 13. 시스템 오류 (59000000번대)
+# ===================================
+
+# 13-1. 데이터베이스 오류 (59001xxx)
+org.springframework.dao.DataAccessException:
+  code: 59001001
+  desc: "데이터베이스 오류가 발생했습니다."
+  status: 500
+org.springframework.dao.DuplicateKeyException:
+  code: 59001002
+  desc: "데이터베이스 중복키 오류가 발생했습니다."
+  status: 500
+org.springframework.dao.DataIntegrityViolationException:
+  code: 59001003
+  desc: "데이터베이스 제약조건 오류가 발생했습니다."
+  status: 500
+
+# 13-2. 네트워크 오류 (59002xxx)
+java.net.SocketTimeoutException:
+  code: 59002001
+  desc: "네트워크 연결 시간이 초과되었습니다."
+  status: 500
+java.net.ConnectException:
+  code: 59002002
+  desc: "네트워크 연결에 실패했습니다."
+  status: 500
+
+# 13-3. 기타 시스템 오류 (59999xxx)
+java.lang.NullPointerException:
+  code: 59999001
+  desc: "시스템 오류가 발생했습니다."
+  status: 500
+unknown:
+  code: 59999999
+  desc: "알 수 없는 오류가 발생했습니다."
   status: 500

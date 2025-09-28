@@ -30,7 +30,13 @@ public class ExceptionControllerAdvice {
     public ResponseBaseDto<Object> bizException(Exception ex, HttpServletRequest req, HttpServletResponse response) throws Exception {
         BizException bizException = (BizException) ex;
 
-        return exceptionWrapperUtil.makeResponse(bizException.getType(), bizException.getOptions().toArray());
+        // null 체크 추가
+        if (bizException.getOptions() != null) {
+            return exceptionWrapperUtil.makeResponse(bizException.getType(), bizException.getOptions().toArray());
+        } else {
+            return exceptionWrapperUtil.makeResponse(bizException.getType());
+        }
+
     }
 
     // 파라미터가 적절하지 않은 경우의 예외처리 메서드
