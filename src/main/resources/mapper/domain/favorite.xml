@@ -32,29 +32,32 @@
 
     <!-- 사용자의 즐겨찾기 목록 조회 (매장 정보 포함) -->
     <select id="selectFavoriteListByUserId" parameterType="string" resultMap="favoriteResultMap">
-        SELECT
-            f.id,
-            f.user_id,
-            f.store_id,
-            f.created_at,
-            f.updated_at,
-            f.created_by,
-            f.updated_by,
-            f.use_yn,
-            s.name,
-            s.description,
-            s.category,
-            s.phone,
-            s.address,
-            s.latitude,
-            s.longitude,
-            s.min_order_amount,
-            s.delivery_fee,
-            s.delivery_time,
-            s.status,
-            s.image_url,
-            s.business_number,
-            s.is_featured
+        /*
+            SQL ID: com.winter.winter_back.domain.favorite.dao.FavoriteDao.selectFavoriteListByUserId
+            SQL 명: 사용자의 즐겨찾기 목록 조회 (매장 정보 포함)
+            */
+        SELECT f.id,
+               f.user_id,
+               f.store_id,
+               f.created_at,
+               f.updated_at,
+               f.created_by,
+               f.updated_by,
+               f.use_yn,
+               s.name,
+               s.description,
+               s.category,
+               s.phone,
+               s.address,
+               s.latitude,
+               s.longitude,
+               s.min_order_amount,
+               s.delivery_fee,
+               s.delivery_time,
+               s.status,
+               s.image_url,
+               s.business_number,
+               s.is_featured
         FROM tb_favorites f
                  INNER JOIN tb_store s ON f.store_id = s.id
         WHERE f.user_id = #{userId}
@@ -66,29 +69,35 @@
     <!-- 즐겨찾기 추가 -->
     <insert id="insertFavorite" parameterType="com.winter.winter_back.domain.favorite.dto.FavoriteDto"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO tb_favorites (
-            user_id,
-            store_id,
-            created_at,
-            updated_at,
-            created_by,
-            updated_by,
-            use_yn
-        ) VALUES (
-                     #{userId},
-                     #{storeId},
-                     CURRENT_TIMESTAMP,
-                     CURRENT_TIMESTAMP,
-                     #{createdBy},
-                     #{updatedBy},
-                     'Y'
-                 )
+
+        /*
+                    SQL ID: com.winter.winter_back.domain.favorite.dao.FavoriteDao.insertFavorite
+                    SQL 명: 즐겨찾기 추가
+                */
+        INSERT INTO tb_favorites (user_id,
+                                  store_id,
+                                  created_at,
+                                  updated_at,
+                                  created_by,
+                                  updated_by,
+                                  use_yn)
+        VALUES (#{userId},
+                #{storeId},
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP,
+                #{createdBy},
+                #{updatedBy},
+                'Y')
     </insert>
 
     <!-- 즐겨찾기 삭제 (논리 삭제) -->
     <update id="deleteFavorite" parameterType="map">
+        /*
+                    SQL ID: com.winter.winter_back.domain.favorite.dao.FavoriteDao.deleteFavorite
+                    SQL 명: 즐겨찾기 삭제 (논리 삭제)
+                */
         UPDATE tb_favorites
-        SET use_yn = 'N',
+        SET use_yn     = 'N',
             updated_at = CURRENT_TIMESTAMP,
             updated_by = #{updatedBy}
         WHERE user_id = #{userId}
@@ -98,15 +107,23 @@
 
     <!-- 즐겨찾기 물리 삭제 (필요 시 사용) -->
     <delete id="deleteFavoritePhysical" parameterType="map">
-        DELETE FROM tb_favorites
+        /*
+                    SQL ID: com.winter.winter_back.domain.favorite.dao.FavoriteDao.deleteFavoritePhysical
+                    SQL 명: 즐겨찾기 물리 삭제 (필요 시 사용)
+                */
+        DELETE
+        FROM tb_favorites
         WHERE user_id = #{userId}
           AND store_id = #{storeId}
     </delete>
 
     <!-- 즐겨찾기 여부 확인 -->
     <select id="existsFavorite" parameterType="map" resultType="boolean">
-        SELECT
-            CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
+        /*
+                    SQL ID: com.winter.winter_back.domain.favorite.dao.FavoriteDao.existsFavorite
+                    SQL 명: 즐겨찾기 여부 확인
+                */
+        SELECT CASE WHEN COUNT(*) > 0 THEN TRUE ELSE FALSE END
         FROM tb_favorites
         WHERE user_id = #{userId}
           AND store_id = #{storeId}
@@ -115,29 +132,32 @@
 
     <!-- 특정 즐겨찾기 조회 -->
     <select id="selectFavoriteByUserIdAndStoreId" parameterType="map" resultMap="favoriteResultMap">
-        SELECT
-            f.id,
-            f.user_id,
-            f.store_id,
-            f.created_at,
-            f.updated_at,
-            f.created_by,
-            f.updated_by,
-            f.use_yn,
-            s.name,
-            s.description,
-            s.category,
-            s.phone,
-            s.address,
-            s.latitude,
-            s.longitude,
-            s.min_order_amount,
-            s.delivery_fee,
-            s.delivery_time,
-            s.status,
-            s.image_url,
-            s.business_number,
-            s.is_featured
+        /*
+                   SQL ID: com.winter.winter_back.domain.favorite.dao.FavoriteDao.selectFavoriteByUserIdAndStoreId
+                   SQL 명: 특정 즐겨찾기 조회
+               */
+        SELECT f.id,
+               f.user_id,
+               f.store_id,
+               f.created_at,
+               f.updated_at,
+               f.created_by,
+               f.updated_by,
+               f.use_yn,
+               s.name,
+               s.description,
+               s.category,
+               s.phone,
+               s.address,
+               s.latitude,
+               s.longitude,
+               s.min_order_amount,
+               s.delivery_fee,
+               s.delivery_time,
+               s.status,
+               s.image_url,
+               s.business_number,
+               s.is_featured
         FROM tb_favorites f
                  INNER JOIN tb_store s ON f.store_id = s.id
         WHERE f.user_id = #{userId}
@@ -147,8 +167,12 @@
 
     <!-- 사용자의 전체 즐겨찾기 삭제 (논리 삭제) -->
     <update id="deleteAllFavoritesByUserId" parameterType="map">
+        /*
+                   SQL ID: com.winter.winter_back.domain.favorite.dao.FavoriteDao.deleteAllFavoritesByUserId
+                   SQL 명: 사용자의 전체 즐겨찾기 삭제 (논리 삭제)
+               */
         UPDATE tb_favorites
-        SET use_yn = 'N',
+        SET use_yn     = 'N',
             updated_at = CURRENT_TIMESTAMP,
             updated_by = #{updatedBy}
         WHERE user_id = #{userId}
@@ -157,8 +181,12 @@
 
     <!-- 매장의 전체 즐겨찾기 삭제 (논리 삭제) -->
     <update id="deleteAllFavoritesByStoreId" parameterType="map">
+        /*
+                    SQL ID: com.winter.winter_back.domain.favorite.dao.FavoriteDao.deleteAllFavoritesByStoreId
+                    SQL 명: 매장의 전체 즐겨찾기 삭제 (논리 삭제)
+                */
         UPDATE tb_favorites
-        SET use_yn = 'N',
+        SET use_yn     = 'N',
             updated_at = CURRENT_TIMESTAMP,
             updated_by = #{updatedBy}
         WHERE store_id = #{storeId}
@@ -167,8 +195,12 @@
 
     <!-- 즐겨찾기 복구 -->
     <update id="restoreFavorite" parameterType="map">
+        /*
+                    SQL ID: com.winter.winter_back.domain.favorite.dao.FavoriteDao.restoreFavorite
+                    SQL 명: 즐겨찾기 복구
+                */
         UPDATE tb_favorites
-        SET use_yn = 'Y',
+        SET use_yn     = 'Y',
             updated_at = CURRENT_TIMESTAMP,
             updated_by = #{updatedBy}
         WHERE user_id = #{userId}

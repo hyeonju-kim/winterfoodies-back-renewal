@@ -50,15 +50,13 @@ public class FavoriteController {
      * POST /favorites
      */
     @PostMapping
-    public String addFavorite(
+    public void addFavorite(
             @AuthenticationPrincipal ComLoginUserInfoDto loginUser,
             @Valid @RequestBody FavoriteRequest request) {
 
         log.info("즐겨찾기 추가 - userId: {}, storeId: {}", loginUser.getUserId(), request.getStoreId());
 
         favoriteService.addFavorite(loginUser.getUserId(), request.getStoreId());
-
-        return "즐겨찾기가 추가되었습니다.";
     }
 
     /**
@@ -66,15 +64,13 @@ public class FavoriteController {
      * DELETE /favorites/{storeId}
      */
     @DeleteMapping("/{storeId}")
-    public String removeFavorite(
+    public void removeFavorite(
             @AuthenticationPrincipal ComLoginUserInfoDto loginUser,
             @PathVariable Long storeId) {
 
         log.info("즐겨찾기 삭제 - userId: {}, storeId: {}", loginUser.getUserId(), storeId);
 
         favoriteService.removeFavorite(loginUser.getUserId(), storeId);
-
-        return "즐겨찾기가 삭제되었습니다.";
     }
 
     /**

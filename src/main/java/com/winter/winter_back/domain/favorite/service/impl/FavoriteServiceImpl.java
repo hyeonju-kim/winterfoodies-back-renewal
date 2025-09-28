@@ -53,7 +53,7 @@ public class FavoriteServiceImpl implements FavoriteService {
     public void addFavorite(String userId, Long storeId) {
         // 이미 즐겨찾기에 있는지 확인
         if (favoriteDao.existsFavorite(userId, storeId)) {
-            throw new BizException("이미 즐겨찾기에 추가된 매장입니다.");
+            throw new BizException("favorite_already_exists");
         }
 
         // 매장이 존재하는지 확인 (선택적)
@@ -67,7 +67,8 @@ public class FavoriteServiceImpl implements FavoriteService {
 
         int result = favoriteDao.insertFavorite(favoriteDto);
         if (result == 0) {
-            throw new BizException("즐겨찾기 추가에 실패했습니다.");
+            throw new BizException("favorite_add_failed");
+
         }
 
         log.info("즐겨찾기 추가 완료 - userId: {}, storeId: {}", userId, storeId);
@@ -78,7 +79,7 @@ public class FavoriteServiceImpl implements FavoriteService {
     public void removeFavorite(String userId, Long storeId) {
         int result = favoriteDao.deleteFavorite(userId, storeId, userId);
         if (result == 0) {
-            throw new BizException("즐겨찾기에서 삭제할 매장을 찾을 수 없습니다.");
+            throw new BizException("favorite_not_found");
         }
 
         log.info("즐겨찾기 삭제 완료 - userId: {}, storeId: {}", userId, storeId);

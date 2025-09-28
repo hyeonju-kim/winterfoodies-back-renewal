@@ -38,6 +38,7 @@ public class StoreDto extends BaseDto {
     private Integer deliveryTime; // 분 단위
     private Double averageRating;
     private Long reviewCount;
+    private Integer orderCount;
     private Boolean isOpen;
     private Double distance; // km
     private LocalDateTime createdAt;
