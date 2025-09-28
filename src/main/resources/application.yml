@@ -51,7 +51,10 @@ spring:
       /login
       ,/user/**
       ,/actuator/**
-
+      ,/categories
+      ,/stores/**
+      ,/menu/**
+      ,/reviews/**
     # 완전히 인증된 사용자만 접근 가능한 URL 패턴들
     # 로그인은 했지만 "Remember Me" 같은 부분 인증이 아닌
     # 완전한 인증(아이디/비밀번호로 직접 로그인)을 거친 사용자만 접근 가능
