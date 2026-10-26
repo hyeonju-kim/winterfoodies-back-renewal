@@ -22,7 +22,7 @@ public class ReviewDto extends BaseDto {
     private Long idx;                       // tb_review.idx (PK)
     private Long storeId;                   // tb_review.store_id
     private String userId;                    // tb_review.user_id
-    private Long orderOrderId;              // tb_review.order_order_id
+    private String orderOrderId;              // tb_review.order_order_id
     private Long rating;                    // tb_review.rating (1~5)
     private String images;                  // tb_review.images
     private String content;                 // tb_review.content

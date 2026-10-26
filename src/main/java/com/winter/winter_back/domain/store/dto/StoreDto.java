@@ -31,6 +31,7 @@ public class StoreDto extends BaseDto {
     private Double latitude;
     private Double longitude;
     private String status; // OPEN, CLOSED, TEMPORARILY_CLOSED
+//    private List<String> imageUrlList;
     private String imageUrl;
     private String category;
     private Integer minOrderAmount;

@@ -49,11 +49,10 @@
                r.modified_datetime,
                s.name      as store_name,
                s.category  as store_category,
-               s.image_url as store_image_url,
                u.name      as user_name
         FROM tb_review r
                  INNER JOIN tb_store s ON r.store_id = s.id
-                 LEFT JOIN tb_user u ON CAST(r.user_id AS CHAR) COLLATE utf8mb4_general_ci = u.id
+                 LEFT JOIN tb_user u ON r.user_id = u.id
         WHERE r.store_id = #{storeId}
         ORDER BY r.created_datetime DESC
         LIMIT #{limit} OFFSET #{offset}
@@ -72,11 +71,10 @@
                r.modified_datetime,
                s.name      as store_name,
                s.category  as store_category,
-               s.image_url as store_image_url,
                u.name      as user_name
         FROM tb_review r
                  INNER JOIN tb_store s ON r.store_id = s.id
-                 LEFT JOIN tb_user u ON CAST(r.user_id AS CHAR) COLLATE utf8mb4_general_ci = u.id
+                 LEFT JOIN tb_user u ON r.user_id = u.id
         WHERE r.user_id = #{userId}
         ORDER BY r.created_datetime DESC
         LIMIT #{limit} OFFSET #{offset}
@@ -109,11 +107,10 @@
                r.modified_datetime,
                s.name      as store_name,
                s.category  as store_category,
-               s.image_url as store_image_url,
                u.name      as user_name
         FROM tb_review r
                  INNER JOIN tb_store s ON r.store_id = s.id
-                 LEFT JOIN tb_user u ON CAST(r.user_id AS CHAR) COLLATE utf8mb4_general_ci = u.id
+                 LEFT JOIN tb_user u ON r.user_id = u.id
         WHERE r.idx = #{reviewId}
     </select>
 
@@ -192,7 +189,7 @@
     </delete>
 
     <!-- 사용자의 모든 리뷰 삭제 -->
-    <delete id="deleteAllReviewsByUserId" parameterType="long">
+    <delete id="deleteAllReviewsByUserId" parameterType="string">
         DELETE
         FROM tb_review
         WHERE user_id = #{userId}

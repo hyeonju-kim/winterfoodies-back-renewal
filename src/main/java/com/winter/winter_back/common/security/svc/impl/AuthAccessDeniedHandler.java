@@ -1,6 +1,6 @@
 package com.winter.winter_back.common.security.svc.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.winter.winter_back.common.dto.ResponseBaseDto;
 import com.winter.winter_back.common.exception.ExceptionWrapperUtil;
 import lombok.RequiredArgsConstructor;
@@ -8,9 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
@@ -27,7 +27,7 @@ public class AuthAccessDeniedHandler implements AccessDeniedHandler {
 			throws IOException, ServletException {
 
 		log.info("######## 접근 권한 없음 ########");
-		log.info("# user_id={}", SessionAttributeManager.getLoginUserInfo()); // 사용자 정보 출력
+		log.info("# uri={}", request.getRequestURI()); // 접근 거부된 요청 경로
 
 		// 응답 생성
 		ResponseBaseDto comResultDto = exceptionInfoConfig.makeResponse("permission_denied");

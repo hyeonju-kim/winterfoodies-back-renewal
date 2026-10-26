@@ -3,7 +3,11 @@
 <mapper namespace="com.winter.winter_back.domain.store.dao.StoreCustomDao">
 
     <select id="findStoresWithDistance" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
-        SELECT s.*,
+        /*
+        SQL ID: com.winter.winter_back.domain.store.dao.findStoresWithDistance
+        SQL 명: 매장 목록 조회
+        */
+        SELECT <include refid="com.winter.winter_back.domain.store.dao.StoreDao.storeColumns"/>,
         ss.average_rating as averageRating,
         ss.total_reviews as reviewCount,
         ss.total_orders as orderCount,
@@ -40,10 +44,14 @@
                 ORDER BY distance ASC
             </otherwise>
         </choose>
-        LIMIT #{size} OFFSET #{page}
+        LIMIT #{size} OFFSET #{offset}
     </select>
 
     <select id="countStoresWithDistance" resultType="long">
+        /*
+        SQL ID: com.winter.winter_back.domain.store.dao.countStoresWithDistance
+        SQL 명: 매장 목록 개수 조회
+        */
         SELECT COUNT(*)
         FROM tb_store s
         <where>
@@ -60,7 +68,11 @@
 
 
     <select id="searchStoresWithDistance" parameterType="com.winter.winter_back.domain.store.dto.StoreSearchRequest" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
-        SELECT s.*,
+        /*
+        SQL ID: com.winter.winter_back.domain.store.dao.searchStoresWithDistance
+        SQL 명: 매장 검색
+        */
+        SELECT <include refid="com.winter.winter_back.domain.store.dao.StoreDao.storeColumns"/>,
         ss.average_rating as averageRating,
         ss.total_reviews as reviewCount,
         <choose>
@@ -87,6 +99,10 @@
     </select>
 
     <select id="countSearchStoresWithDistance" resultType="long">
+        /*
+        SQL ID: com.winter.winter_back.domain.store.dao.countSearchStoresWithDistance
+        SQL 명: 매장 검색 카운트
+        */
         SELECT COUNT(*)
         FROM tb_store s
         <where>
@@ -100,10 +116,10 @@
 
     <select id="findPopularStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
         /*
-        SQL ID: findPopularStores
+        SQL ID: com.winter.winter_back.domain.store.dao.findPopularStores
         SQL 명: 인기 매장 조회 (총 주문 수, 평점 순으로 조회)
         */
-        SELECT s.*,
+        SELECT <include refid="com.winter.winter_back.domain.store.dao.StoreDao.storeColumns"/>,
                ss.average_rating as averageRating,
                ss.total_reviews as reviewCount,
                (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
@@ -118,7 +134,11 @@
     </select>
 
     <select id="findHighRatedStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
-        SELECT s.*,
+        /*
+                SQL ID: com.winter.winter_back.domain.store.dao.findHighRatedStores
+                SQL 명: 별점 순 조회
+                */
+        SELECT <include refid="com.winter.winter_back.domain.store.dao.StoreDao.storeColumns"/>,
                ss.average_rating as averageRating,
                ss.total_reviews as reviewCount,
                (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
@@ -135,7 +155,11 @@
     </select>
 
     <select id="findNewStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
-        SELECT s.*,
+        /*
+                        SQL ID: com.winter.winter_back.domain.store.dao.findNewStores
+                        SQL 명: 신상 가게 조회
+                        */
+        SELECT <include refid="com.winter.winter_back.domain.store.dao.StoreDao.storeColumns"/>,
                ss.average_rating as averageRating,
                ss.total_reviews as reviewCount,
                (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
@@ -151,7 +175,11 @@
     </select>
 
     <select id="findDiscountStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
-        SELECT s.*,
+        /*
+        SQL ID: com.winter.winter_back.domain.store.dao.findDiscountStores
+        SQL 명: findDiscountStores
+        */
+        SELECT <include refid="com.winter.winter_back.domain.store.dao.StoreDao.storeColumns"/>,
                ss.average_rating as averageRating,
                ss.total_reviews as reviewCount,
                (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
@@ -167,7 +195,11 @@
     </select>
 
     <select id="findRecommendedStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
-        SELECT s.*,
+        /*
+                SQL ID: com.winter.winter_back.domain.store.dao.findRecommendedStores
+                SQL 명: findRecommendedStores
+                */
+        SELECT <include refid="com.winter.winter_back.domain.store.dao.StoreDao.storeColumns"/>,
                ss.average_rating as averageRating,
                ss.total_reviews as reviewCount,
                (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))
@@ -186,7 +218,11 @@
     </select>
 
     <select id="findNearbyStores" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
-        SELECT s.*,
+        /*
+                        SQL ID: com.winter.winter_back.domain.store.dao.findNearbyStores
+                        SQL 명: findNearbyStores
+                        */
+        SELECT <include refid="com.winter.winter_back.domain.store.dao.StoreDao.storeColumns"/>,
                ss.average_rating as averageRating,
                ss.total_reviews as reviewCount,
                (6371 * acos(cos(radians(#{lat})) * cos(radians(s.latitude))

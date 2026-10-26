@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -37,7 +37,7 @@ public class ResponseWrapper implements ResponseBodyAdvice<Object> { // 공통�
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
         // 반환 타입이 JSON 타입이 아니면(ex. String) beforeBodyWrite 메서드 SKIP
-        return MappingJackson2HttpMessageConverter.class.isAssignableFrom(converterType);
+        return JacksonJsonHttpMessageConverter.class.isAssignableFrom(converterType);
     }
 
     // ResponseBodyAdvice 인터페이스의 메서드 구현: 응답 데이터를 조작하는 로직을 담당

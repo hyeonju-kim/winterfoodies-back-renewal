@@ -4,11 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Positive;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -31,8 +31,7 @@ public class OrderRequest {
     private Long storeId;
 
     @NotEmpty(message = "주문 항목은 필수입니다")
-    @Valid
-    private List<OrderItem> items;
+    private List<@Valid OrderItem> items;
 
     @NotNull(message = "배송 주소는 필수입니다")
     @Valid
@@ -41,11 +40,9 @@ public class OrderRequest {
     @NotBlank(message = "결제 방법은 필수입니다")
     private String paymentMethod;
 
-    @NotNull(message = "총 금액은 필수입니다")
-    @Positive(message = "총 금액은 0보다 커야 합니다")
+    // 금액은 서버가 메뉴·옵션·매장 배달비로 다시 계산한다. 아래 두 값은 화면 표시 금액과 비교(불일치 로그)용으로만 받는다
     private BigDecimal totalAmount;
 
-    @NotNull(message = "배달비는 필수입니다")
     private BigDecimal deliveryFee;
 
     private String orderRequest;
@@ -61,9 +58,7 @@ public class OrderRequest {
         @Positive(message = "수량은 0보다 커야 합니다")
         private Integer quantity;
 
-        @NotNull(message = "가격은 필수입니다")
-        @Positive(message = "가격은 0보다 커야 합니다")
-        private BigDecimal price;
+        private BigDecimal price; // 사용하지 않음 (서버가 메뉴 가격으로 계산)
 
         private List<OrderItemOption> options;
         private String specialRequest;

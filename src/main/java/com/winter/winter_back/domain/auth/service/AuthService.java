@@ -1,12 +1,11 @@
 package com.winter.winter_back.domain.auth.service;
 
 import com.winter.winter_back.common.exception.BizException;
+import com.winter.winter_back.common.redis.CacheConfig;
 import com.winter.winter_back.common.security.config.TokenProvider;
 import com.winter.winter_back.common.security.dao.SecuritySupportDao;
 import com.winter.winter_back.common.security.dto.ComLoginUserInfoDto;
-import com.winter.winter_back.common.security.dto.ComLoginUserMenuDto;
 import com.winter.winter_back.common.security.dto.ComRoleUserDto;
-import com.winter.winter_back.common.security.dto.RoleMenuScrnMapg;
 import com.winter.winter_back.domain.auth.dto.LoginRequest;
 import com.winter.winter_back.domain.auth.dto.RefreshTokenRequest;
 import com.winter.winter_back.domain.auth.dto.TokenVo;
@@ -22,7 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -53,9 +52,8 @@ public class AuthService {
      * 1. 사용자 존재 여부 확인
      * 2. 비밀번호 검증
      * 3. 사용자 권한 정보 조회
-     * 4. 메뉴 권한 정보 조회
-     * 5. 로그인 이력 저장
-     * 6. JWT 토큰 생성 및 캐시 저장
+     * 4. 로그인 이력 저장
+     * 5. JWT 토큰 생성 및 캐시 저장
      *
      * @param loginRequest 로그인 요청 정보 (username, password)
      * @return TokenVo JWT 토큰 쌍 (accessToken, refreshToken)
@@ -64,7 +62,6 @@ public class AuthService {
     public TokenVo login(LoginRequest loginRequest) {
         // 1. 사용자 기본 정보 조회 (ID, 이름, 연락처 등)
         ComLoginUserInfoDto userInfo = securitySupportDao.selectUser(loginRequest.getUsername());
-        log.info("[login] > [userInfo] === {}", userInfo);
 
         if (userInfo == null) {
             log.error("User not found: {}", loginRequest.getUsername());
@@ -88,15 +85,10 @@ public class AuthService {
         }
         userInfo.setRoleList(roleList);
 
-        // 4. 메뉴 권한 정보 조회 (사용자가 접근 가능한 메뉴 목록)
-        List<RoleMenuScrnMapg> menuList = securitySupportDao.getRoleMenuScrnRoleUse(roleList);
-        log.info("[login] > [menuList] === {}", menuList);
-        userInfo.setMenuScreenInfo(convertToMenuDto(menuList));
-
-        // 5. 로그인 이력 저장 (로그인 시간, 사용자 ID 등)
+        // 4. 로그인 이력 저장 (로그인 시간, 사용자 ID 등)
         securitySupportDao.insertLoginUser(userInfo.getUserId());
 
-        // 6. JWT 토큰 생성 및 반환
+        // 5. JWT 토큰 생성 및 반환
         return tokenManage(userInfo.getUserId(), userInfo);
     }
 
@@ -128,7 +120,6 @@ public class AuthService {
 
         // 2. Access Token 추출 (헤더 또는 요청 body에서)
         String accessToken = TokenProvider.getAccessTokenFromHeader(request);
-        log.info("[refreshToken] > [accessToken] === {}", accessToken);
 
         if (!StringUtils.hasText(accessToken)) {
             accessToken = refreshRequest.getAccessToken();
@@ -139,7 +130,6 @@ public class AuthService {
 
         // 3. 만료된 Access Token에서 사용자 정보 추출 (만료되어도 사용자명은 추출 가능)
         Authentication authentication = TokenProvider.getAuthentication(accessToken);
-        log.info("[refreshToken] > [authentication] === {}", authentication);
 
         if (authentication == null) {
             throw new BizException("token_wrong");
@@ -161,11 +151,10 @@ public class AuthService {
         }
 
         // 5. 캐시에서 해당 사용자의 토큰 정보 조회
-        Cache winterCache = cacheManager.getCache("winter_cache");
+        Cache winterCache = cacheManager.getCache(CacheConfig.TOKEN_CACHE_NAME);
         log.info("[refreshToken] > [winterCache] === {}", winterCache.getName());
 
         Cache.ValueWrapper valueWrapper = winterCache.get(userId);
-        log.info("[refreshToken] > [valueWrapper] === {}", valueWrapper);
 
         if (valueWrapper == null) {
             log.warn("[refreshToken] > 캐시에서 사용자 {} 의 토큰 정보를 찾을 수 없습니다.", userId);
@@ -200,13 +189,8 @@ public class AuthService {
         }
         userInfo.setRoleList(roleList);
 
-        // 10. 메뉴 권한 정보 재조회 (필요한 경우)
-        List<RoleMenuScrnMapg> menuList = securitySupportDao.getRoleMenuScrnRoleUse(roleList);
-        userInfo.setMenuScreenInfo(convertToMenuDto(menuList));
-
-        // 11. 새로운 토큰 쌍 생성
+        // 10. 새로운 토큰 쌍 생성
         TokenVo newToken = tokenManage(userId, userInfo);
-        log.info("[refreshToken] > [newToken] === {}", newToken);
 
         log.info("[refreshToken] > 토큰 갱신 완료. userId: {}", userId);
         return newToken;
@@ -221,7 +205,6 @@ public class AuthService {
      */
     private TokenVo tokenManage(String userId, ComLoginUserInfoDto userInfo) {
         log.info("[tokenManage] > [userId] === {}", userId);
-        log.info("[tokenManage] > [userInfo] === {}", userInfo);
 
         // 1. 사용자 권한을 Spring Security의 GrantedAuthority 형태로 변환
         // 예: ComRoleUserDto의 roleId "ROLE_ADMIN" -> SimpleGrantedAuthority("ROLE_ADMIN")
@@ -242,26 +225,11 @@ public class AuthService {
         // 4. 캐시에 토큰 정보 저장
         // 키: 사용자 ID, 값: TokenVo 객체
         // 토큰 갱신 시 검증용으로 사용
-        Objects.requireNonNull(cacheManager.getCache("winter_cache"))
+        Objects.requireNonNull(cacheManager.getCache(CacheConfig.TOKEN_CACHE_NAME))
                 .put(userId, tokenVo);
 
         return tokenVo;
     }
-
-    /**
-     * RoleMenuScrnMapg를 ComLoginUserMenuDto로 변환하는 메서드
-     *
-     * 현재는 임시 구현이며, 실제 프로젝트에서는 메뉴 정보 변환 로직 구현 필요
-     *
-     * @param menuList 데이터베이스에서 조회한 메뉴 권한 정보
-     * @return 변환된 메뉴 정보 리스트
-     */
-    private List<ComLoginUserMenuDto> convertToMenuDto(List<RoleMenuScrnMapg> menuList) {
-        // TODO: 실제 변환 로직 구현 필요
-        // 현재는 빈 리스트 반환 (메뉴 기능 미구현)
-        return new ArrayList<>();
-    }
-
 
     /**
      * 로그아웃 처리 (캐시 및 토큰 무효화)
@@ -272,7 +240,7 @@ public class AuthService {
             TokenProvider.invalidateAllUserTokens(userId);
 
             // 2. 캐시에서 토큰 정보 삭제
-            Cache winterCache = cacheManager.getCache("winter_cache");
+            Cache winterCache = cacheManager.getCache(CacheConfig.TOKEN_CACHE_NAME);
             if (winterCache != null) {
                 winterCache.evict(userId);
                 log.info("[logout] 사용자 {}의 캐시 정보가 삭제되었습니다", userId);
@@ -281,7 +249,7 @@ public class AuthService {
             log.info("[logout] 사용자 {} 로그아웃 완료", userId);
         } catch (Exception e) {
             log.error("[logout] 로그아웃 처리 중 오류 발생: {}", e.getMessage());
-            throw new BizException("logout_failed");
+            throw new BizException("logout_fail");
         }
     }
 }

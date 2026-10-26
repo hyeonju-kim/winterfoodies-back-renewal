@@ -75,5 +75,5 @@ public interface ReviewService {
      * @param orderOrderId 주문 ID
      * @return 작성 가능 여부
      */
-    boolean isReviewWritable(String userId, Long orderOrderId);
+    boolean isReviewWritable(String userId, String orderOrderId);
 }

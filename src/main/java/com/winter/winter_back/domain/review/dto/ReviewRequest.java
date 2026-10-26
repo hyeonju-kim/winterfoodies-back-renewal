@@ -2,10 +2,11 @@ package com.winter.winter_back.domain.review.dto;
 
 import lombok.Data;
 
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * description    :
@@ -23,8 +24,8 @@ public class ReviewRequest {
     @NotNull(message = "매장 ID는 필수입니다.")
     private Long storeId;
 
-    @NotNull(message = "주문 ID는 필수입니다.")
-    private Long orderOrderId;
+    @NotBlank(message = "주문 ID는 필수입니다.")
+    private String orderOrderId; // tb_order.order_id (주문 번호)
 
     @NotNull(message = "평점은 필수입니다.")
     @Min(value = 1, message = "평점은 1점 이상이어야 합니다.")

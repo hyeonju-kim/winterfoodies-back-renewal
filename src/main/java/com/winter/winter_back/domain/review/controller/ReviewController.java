@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 /**
  * description    :
@@ -76,7 +76,7 @@ public class ReviewController {
      * POST /reviews
      */
     @PostMapping
-    public String createReview(
+    public void createReview(
             @AuthenticationPrincipal ComLoginUserInfoDto loginUser,
             @Valid @RequestBody ReviewRequest request) {
 
@@ -84,8 +84,6 @@ public class ReviewController {
                 loginUser.getUserId(), request.getStoreId(), request.getOrderOrderId(), request.getRating());
 
         reviewService.createReview(loginUser.getUserId(), request);
-
-        return "리뷰가 작성되었습니다.";
     }
 
     /**
@@ -93,7 +91,7 @@ public class ReviewController {
      * PUT /reviews/{reviewId}
      */
     @PutMapping("/{reviewId}")
-    public String updateReview(
+    public void updateReview(
             @AuthenticationPrincipal ComLoginUserInfoDto loginUser,
             @PathVariable Long reviewId,
             @Valid @RequestBody ReviewUpdateRequest request) {
@@ -102,8 +100,6 @@ public class ReviewController {
                 loginUser.getUserId(), reviewId, request.getRating());
 
         reviewService.updateReview(loginUser.getUserId(), reviewId, request);
-
-        return "리뷰가 수정되었습니다.";
     }
 
     /**
@@ -111,15 +107,13 @@ public class ReviewController {
      * DELETE /reviews/{reviewId}
      */
     @DeleteMapping("/{reviewId}")
-    public String deleteReview(
+    public void deleteReview(
             @AuthenticationPrincipal ComLoginUserInfoDto loginUser,
             @PathVariable Long reviewId) {
 
         log.info("리뷰 삭제 - userId: {}, reviewId: {}", loginUser.getUserId(), reviewId);
 
         reviewService.deleteReview(loginUser.getUserId(), reviewId);
-
-        return "리뷰가 삭제되었습니다.";
     }
 
     /**
@@ -141,7 +135,7 @@ public class ReviewController {
     @GetMapping("/order/{orderOrderId}/writable")
     public Boolean isReviewWritable(
             @AuthenticationPrincipal ComLoginUserInfoDto loginUser,
-            @PathVariable Long orderOrderId) {
+            @PathVariable String orderOrderId) {
 
         log.info("리뷰 작성 가능 여부 확인 - userId: {}, orderOrderId: {}", loginUser.getUserId(), orderOrderId);
 

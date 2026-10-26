@@ -126,7 +126,6 @@
         SELECT
         o.order_id,
         s.name as store_name,
-        s.image_url as store_image,
         o.status,
         CASE
         WHEN o.status = 'PENDING' THEN '주문 접수 대기중'
