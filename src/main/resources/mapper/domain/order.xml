@@ -144,7 +144,7 @@
         ELSE '확인 중'
         END as status_description,
         o.total_amount,
-        (SELECT COUNT(*) FROM tb_order_items WHERE order_id = o.order_id) as item_count,
+        (SELECT COALESCE(SUM(quantity), 0) FROM tb_order_items WHERE order_id = o.order_id) as item_count,
         o.created_datetime,
         CASE
         WHEN o.status = 'PENDING' THEN '주문 접수 대기중'

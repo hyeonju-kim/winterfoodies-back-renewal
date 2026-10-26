@@ -17,7 +17,7 @@ public interface OrderService {
 
     OrderResponse createOrder(OrderRequest orderRequest, String userId);
 
-    OrderConfirmResponse confirmOrder(OrderConfirmRequest confirmRequest, String userId);
+    OrderConfirmResponse confirmOrder(OrderConfirmRequest confirmRequest, String userId); // 주문 확인 (사장님 기능에서 사용 예정, 지금은 호출하는 API 없음)
 
     ListResponseDto<OrderListResponse> getOrderList(String userId, int page, int limit, String status);
 

@@ -69,6 +69,7 @@ spring:
       ,/home/feed
       ,/reviews/store/**
       ,/reviews/{reviewId:\d+}
+      ,/notices/**
     # POST 만 허용: 로그인·토큰 갱신·회원가입
     permit-all-post-url-patterns:
       /login

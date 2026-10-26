@@ -324,3 +324,16 @@ CREATE TABLE IF NOT EXISTS tb_review (
     KEY idx_review_user (user_id, created_datetime),
     KEY idx_review_user_order (user_id, order_order_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '매장 리뷰';
+
+CREATE TABLE IF NOT EXISTS tb_notice (
+    idx                BIGINT        NOT NULL AUTO_INCREMENT COMMENT '공지 PK',
+    title              VARCHAR(200)  NOT NULL COMMENT '제목',
+    content            TEXT          NOT NULL COMMENT '내용',
+    is_pinned          CHAR(1)       NOT NULL DEFAULT 'N' COMMENT '상단 고정 여부(Y/N)',
+    is_visible         CHAR(1)       NOT NULL DEFAULT 'Y' COMMENT '공개 여부(Y/N)',
+    created_datetime   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '등록일시',
+    updated_datetime   DATETIME      NULL     ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
+    created_by         VARCHAR(50)   NULL     COMMENT '등록자',
+    PRIMARY KEY (idx),
+    KEY idx_notice_list (is_visible, is_pinned, created_datetime)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '공지사항';

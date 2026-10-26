@@ -24,8 +24,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +39,7 @@ import java.util.stream.Collectors;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 9. 3.         hj kim             최초 생성
+ * 26. 10. 26.       hj kim             영업 중인 가게만 주문, 포장 연락처 형식·결제수단 검사 / 주문 확인은 사장님 기능용으로 남김
  */
 
 @Slf4j
@@ -44,6 +47,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class OrderServiceImpl implements OrderService {
+
+    // 포장 주문 연락처: 휴대폰 번호 숫자만 (010xxxxxxxx)
+    private static final Pattern CONTACT_PHONE_PATTERN = Pattern.compile("^01[0-9]{8,9}$");
+    // 결제수단: 현장결제 / 카드 (PG 연동 전이라 실제 결제는 가게에서)
+    private static final Set<String> PAYMENT_METHODS = Set.of("ON_SITE", "CARD");
 
     private final OrderDao orderDao;
     private final OrderItemDao orderItemDao;
@@ -63,6 +71,10 @@ public class OrderServiceImpl implements OrderService {
         if (store == null) {
             throw new BizException("restaurant_not_found");
         }
+        // 포장 주문이라 영업 중인 가게만 받는다 (CLOSED·TEMPORARILY_CLOSED 거부)
+        if (!"OPEN".equals(store.getStatus())) {
+            throw new BizException("restaurant_closed");
+        }
 
         // 포장(기본)이면 배송 주소 없이 받고 배달비 0, 배달이면 배송 주소 필수
         OrderType orderType = OrderType.from(orderRequest.getOrderType());
@@ -71,6 +83,13 @@ public class OrderServiceImpl implements OrderService {
         }
         if (orderType == OrderType.DELIVERY && orderRequest.getDeliveryAddress() == null) {
             throw new BizException("delivery_address_required");
+        }
+        if (orderType == OrderType.PICKUP
+                && (orderRequest.getContactPhone() == null || !CONTACT_PHONE_PATTERN.matcher(orderRequest.getContactPhone()).matches())) {
+            throw new BizException("invalid_contact_phone");
+        }
+        if (!PAYMENT_METHODS.contains(orderRequest.getPaymentMethod())) {
+            throw new BizException("invalid_payment_method");
         }
 
         String orderId = generateOrderId();

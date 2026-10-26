@@ -17,6 +17,7 @@ API 스모크(회귀) 테스트 - 주요 API 를 실제 서버에 순서대로 �
 """
 import argparse
 import json
+import subprocess
 import sys
 import time
 import urllib.error
@@ -29,12 +30,21 @@ TOKEN_WRONG = '40001007'
 TOKEN_BLACKLISTED = '40001008'
 TOKEN_REFRESH_EXPIRE = '40001009'
 NOT_SUPPORTED_CODE = '30003003'
+METHOD_NOT_ALLOWED = '30003002'
 REVIEW_ALREADY_EXISTS = '64001002'
 MENU_NOT_FOUND = '62001001'
 MENU_OPTION_NOT_FOUND = '62002001'
 MINIMUM_ORDER_AMOUNT = '63001007'
 INVALID_ORDER_TYPE = '63001009'
 DELIVERY_ADDRESS_REQUIRED = '63001010'
+INVALID_CONTACT_PHONE = '63001011'
+INVALID_PAYMENT_METHOD = '63001012'
+RESTAURANT_CLOSED = '61001002'
+INVALID_INPUT = '30002003'
+REVIEW_ORDER_NOT_COMPLETED = '64001006'
+NOTICE_NOT_FOUND = '64002001'
+HIDDEN_NOTICE_ID = 4  # 테스트 데이터의 비공개 공지
+CLOSED_STORE_ID = 8  # 테스트 데이터의 영업 종료(CLOSED) 매장
 
 
 class SmokeTest:
@@ -69,7 +79,10 @@ class SmokeTest:
             code = None
             description = 'JSON 아님: ' + text[:80]
 
-        data = payload.get('data') or {}
+        # false·0 같은 값은 그대로 두고 없을 때만 빈 dict
+        data = payload.get('data')
+        if data is None:
+            data = {}
         is_passed = code == expected_code
         # 응답 본문의 status 와 실제 HTTP 상태 코드가 같아야 한다 (에러도 200 으로 내려가던 문제 방지)
         if is_passed and payload.get('status') is not None and payload.get('status') != http_status:
@@ -176,6 +189,21 @@ class SmokeTest:
                       else 'orderType=%s deliveryFee=%s deliveryInfo=%s' % (data.get('orderType'), data.get('deliveryFee'),
                                                                               data.get('deliveryInfo')))
             self.call('포장 주문 취소', 'PUT', '/orders/%s/cancel' % pickup_order_id, {'reason': 'test'}, token=access_token)
+        pickup_body = {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 2}],
+                       'contactPhone': '01011112222', 'paymentMethod': 'ON_SITE'}
+        self.call('문 닫은 가게 주문 거부', 'POST', '/orders', dict(pickup_body, storeId=CLOSED_STORE_ID),
+                  token=access_token, expected_code=RESTAURANT_CLOSED)
+        self.call('수량 99개 초과 거부', 'POST', '/orders',
+                  dict(pickup_body, items=[{'menuId': 1, 'quantity': 100}]), token=access_token,
+                  expected_code=INVALID_INPUT)
+        self.call('포장 연락처 누락 거부', 'POST', '/orders', dict(pickup_body, contactPhone=None),
+                  token=access_token, expected_code=INVALID_CONTACT_PHONE)
+        self.call('포장 연락처 형식 거부', 'POST', '/orders', dict(pickup_body, contactPhone='010-1111-2222'),
+                  token=access_token, expected_code=INVALID_CONTACT_PHONE)
+        self.call('지원하지 않는 결제수단 거부', 'POST', '/orders', dict(pickup_body, paymentMethod='BITCOIN'),
+                  token=access_token, expected_code=INVALID_PAYMENT_METHOD)
+        self.call('주문 확인 API 손님 차단(제거됨)', 'POST', '/orders/confirm', {'orderId': order_id},
+                  token=access_token, expected_code=METHOD_NOT_ALLOWED)
         self.call('주문 목록', 'GET', '/orders', token=access_token,
                   check=lambda data: None if all('orderType' in order for order in data.get('dataList', []))
                   else 'orderType 누락')
@@ -185,18 +213,40 @@ class SmokeTest:
                       (None if data.get('paymentMethod') == 'CARD' else 'paymentMethod=%s' % data.get('paymentMethod')))
             self.call('주문 추적', 'GET', '/orders/%s/tracking' % order_id, token=access_token)
 
-        # 리뷰
+        # 리뷰 - 받아간(DELIVERED) 주문만 가능. 아직 사장님 API 가 없어 완료 처리는 DB 로 직접 한다
         if order_id:
-            self.call('리뷰 작성 가능 여부', 'GET', '/reviews/order/%s/writable' % order_id, token=access_token,
-                      check=lambda data: None if data is True else '작성 가능해야 함')
+            self.call('진행 중 주문 리뷰 작성 불가', 'GET', '/reviews/order/%s/writable' % order_id, token=access_token,
+                      check=lambda data: None if data is False else '진행 중 주문은 false 여야 함')
+            self.call('진행 중 주문 리뷰 거부', 'POST', '/reviews',
+                      {'storeId': 1, 'orderOrderId': order_id, 'rating': 5, 'content': 'early'}, token=access_token,
+                      expected_code=REVIEW_ORDER_NOT_COMPLETED)
+        review_order = self.call('리뷰용 포장 주문 생성', 'POST', '/orders', pickup_body, token=access_token)
+        review_order_id = review_order.get('orderId')
+        if review_order_id and mark_order_delivered(review_order_id):
+            self.call('받아간 주문 리뷰 작성 가능', 'GET', '/reviews/order/%s/writable' % review_order_id,
+                      token=access_token, check=lambda data: None if data is True else '작성 가능해야 함')
             self.call('리뷰 작성', 'POST', '/reviews',
-                      {'storeId': 1, 'orderOrderId': order_id, 'rating': 5, 'content': 'good'}, token=access_token)
+                      {'storeId': 1, 'orderOrderId': review_order_id, 'rating': 5, 'content': 'good'},
+                      token=access_token)
             self.call('같은 주문 리뷰 중복 거부', 'POST', '/reviews',
-                      {'storeId': 1, 'orderOrderId': order_id, 'rating': 4, 'content': 'again'}, token=access_token,
-                      expected_code=REVIEW_ALREADY_EXISTS)
-        self.call('가게 리뷰 목록', 'GET', '/reviews/store/1')
+                      {'storeId': 1, 'orderOrderId': review_order_id, 'rating': 4, 'content': 'again'},
+                      token=access_token, expected_code=REVIEW_ALREADY_EXISTS)
+        else:
+            print('SKIP  리뷰 작성 성공 흐름 (DB 컨테이너에 접근할 수 없어 주문 완료 처리를 못 함)')
+        self.call('가게 리뷰 목록(작성자 아이디 숨김)', 'GET', '/reviews/store/1',
+                  check=lambda data: None if all(review.get('userId') is None for review in data.get('dataList', []))
+                  else '공개 목록에 userId 노출')
         self.call('내 리뷰', 'GET', '/reviews/my', token=access_token)
         self.call('리뷰 통계', 'GET', '/reviews/store/1/stats')
+
+        # 공지사항 (비로그인 조회)
+        self.call('공지 목록(고정 먼저·비공개 제외)', 'GET', '/notices',
+                  check=lambda data: None if (data.get('dataList') and data['dataList'][0].get('isPinned') == 'Y'
+                                              and all(notice.get('idx') != HIDDEN_NOTICE_ID for notice in data['dataList'])
+                                              and all(notice.get('content') is None for notice in data['dataList']))
+                  else '고정 공지가 맨 위가 아니거나 비공개·본문 포함')
+        self.call('공지 상세', 'GET', '/notices/1', check=lambda data: None if data.get('content') else '본문 없음')
+        self.call('비공개 공지 상세 거부', 'GET', '/notices/%d' % HIDDEN_NOTICE_ID, expected_code=NOTICE_NOT_FOUND)
 
         # 정리
         if order_id:
@@ -230,6 +280,17 @@ class SmokeTest:
         passed_count = sum(1 for result in self.results if result[1])
         print('\n결과: %d / %d 통과' % (passed_count, len(self.results)))
         return passed_count == len(self.results)
+
+
+def mark_order_delivered(order_id, container='winter-mariadb'):
+    """사장님 API 가 생기기 전까지 주문 완료(DELIVERED) 처리는 로컬 DB 컨테이너에 직접 한다. 실패하면 False"""
+    sql = "UPDATE tb_order SET status = 'DELIVERED' WHERE order_id = '%s'" % order_id
+    command = ['docker', 'exec', container, 'sh', '-c',
+               'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" winter_app -e "%s"' % sql]
+    try:
+        return subprocess.run(command, capture_output=True, timeout=20).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
 
 
 def check_amount(data, expected_amount):
