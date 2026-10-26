@@ -12,6 +12,7 @@ import com.winter.winter_back.domain.store.service.StoreService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -117,7 +118,10 @@ public class StoreServiceImpl implements StoreService {
     public StoreRankingResponse getStoreRankings(String type, Double lat, Double lng, int limit) {
         List<StoreDto> stores;
 
-        switch (type.toLowerCase()) {
+        // 랭킹 종류를 지정하지 않으면 인기순
+        String rankingType = StringUtils.hasText(type) ? type.trim().toLowerCase() : "popular";
+
+        switch (rankingType) {
             case "popular":
                 stores = storeCustomDao.findPopularStores(lat, lng, limit);
                 break;
@@ -131,11 +135,11 @@ public class StoreServiceImpl implements StoreService {
                 stores = storeCustomDao.findDiscountStores(lat, lng, limit);
                 break;
             default:
-                stores = storeCustomDao.findPopularStores(lat, lng, limit);
+                throw new BizException("code_not_found", "랭킹 종류(" + type + ")");
         }
 
         return StoreRankingResponse.builder()
-                .type(type)
+                .type(rankingType)
                 .stores(stores)
                 .build();
     }

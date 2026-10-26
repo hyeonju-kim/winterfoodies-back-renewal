@@ -20,8 +20,7 @@ import java.time.LocalDateTime;
 public class AddressDto {
     private Long idx;
 
-    @NotBlank(message = "사용자 ID는 필수입니다")
-    private String userId;
+    private String userId; // 요청 본문으로 받지 않고 로그인 토큰의 사용자로 채운다
 
     @NotBlank(message = "주소 별칭은 필수입니다")
     @Size(max = 20, message = "주소 별칭은 20자 이내여야 합니다")
