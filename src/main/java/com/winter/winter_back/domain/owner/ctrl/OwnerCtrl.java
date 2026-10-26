@@ -28,6 +28,7 @@ import java.util.List;
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보 수정, 영업시간 조회·수정 추가
  * 26. 10. 26.       hj kim             매출 조회 추가
+ * 26. 10. 26.       hj kim             가게 등록 추가
  */
 @Slf4j
 @RestController
@@ -43,6 +44,15 @@ public class OwnerCtrl {
     @GetMapping("/store")
     public OwnerStoreResponse getMyStore(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo) {
         return ownerSvc.getMyStore(loginUserInfo.getUserId());
+    }
+
+    /**
+     * 가게 등록 (사장님 가입 후 처음 한 번)
+     */
+    @PostMapping("/store")
+    public OwnerStoreResponse regStore(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                       @RequestBody @Valid OwnerRequests.StoreRegisterRequest request) {
+        return ownerSvc.regStore(loginUserInfo.getUserId(), request);
     }
 
     /**

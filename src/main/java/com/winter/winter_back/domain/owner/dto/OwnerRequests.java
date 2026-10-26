@@ -3,6 +3,8 @@ package com.winter.winter_back.domain.owner.dto;
 import lombok.Data;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -22,6 +24,7 @@ import java.util.List;
  * -----------------------------------------------------------
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             메뉴 추가·수정, 가게 정보, 영업시간 요청 추가
+ * 26. 10. 26.       hj kim             가게 등록 요청 추가
  */
 public final class OwnerRequests {
 
@@ -87,6 +90,42 @@ public final class OwnerRequests {
         private String phone;
 
         @NotNull(message = "최소 주문금액을 입력해주세요")
+        @Min(value = 0, message = "최소 주문금액은 0원 이상이어야 합니다")
+        @Max(value = 1000000, message = "최소 주문금액은 100만원까지 입력할 수 있습니다")
+        private Integer minOrderAmount;
+    }
+
+    /** 가게 등록 (사장님 가입 후 처음 한 번, 사업자번호는 받지 않음 - 등록 안 한 노점이 많음) */
+    @Data
+    public static class StoreRegisterRequest {
+        @NotBlank(message = "가게 이름을 입력해주세요")
+        @Size(max = 50, message = "가게 이름은 50자까지 입력할 수 있습니다")
+        private String name;
+
+        @NotBlank(message = "간식 종류를 선택해주세요")
+        private String category;
+
+        @Size(max = 300, message = "가게 소개는 300자까지 입력할 수 있습니다")
+        private String description;
+
+        @Pattern(regexp = "^$|^0[0-9]{8,10}$", message = "전화번호는 숫자만 입력해주세요")
+        private String phone;
+
+        @NotBlank(message = "가게 위치(주소)를 입력해주세요")
+        @Size(max = 200, message = "주소는 200자까지 입력할 수 있습니다")
+        private String address;
+
+        // 위치: 앱에서 "지금 내 위치로 설정" (국내 범위만)
+        @NotNull(message = "가게 위치를 설정해주세요")
+        @DecimalMin(value = "33.0", message = "가게 위치가 올바르지 않습니다")
+        @DecimalMax(value = "39.0", message = "가게 위치가 올바르지 않습니다")
+        private Double latitude;
+
+        @NotNull(message = "가게 위치를 설정해주세요")
+        @DecimalMin(value = "124.0", message = "가게 위치가 올바르지 않습니다")
+        @DecimalMax(value = "132.0", message = "가게 위치가 올바르지 않습니다")
+        private Double longitude;
+
         @Min(value = 0, message = "최소 주문금액은 0원 이상이어야 합니다")
         @Max(value = 1000000, message = "최소 주문금액은 100만원까지 입력할 수 있습니다")
         private Integer minOrderAmount;

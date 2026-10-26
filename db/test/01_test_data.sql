@@ -148,3 +148,16 @@ SELECT v.order_id, v.menu_id, v.quantity, v.price
        ) v
  WHERE v.order_id != 'x'
    AND NOT EXISTS (SELECT 1 FROM tb_order_items oi WHERE oi.order_id = v.order_id AND oi.menu_id = v.menu_id);
+
+-- 가게 통계를 실제 리뷰·받아간 주문으로 다시 계산 (위 임시 숫자를 덮어씀, 목록 별점 = 상세 별점)
+INSERT INTO tb_store_stats (store_id, average_rating, total_reviews, total_orders, updated_at)
+SELECT s.id
+     , (SELECT COALESCE(ROUND(AVG(r.rating), 2), 0) FROM tb_review r WHERE r.store_id = s.id)
+     , (SELECT COUNT(*) FROM tb_review r WHERE r.store_id = s.id)
+     , (SELECT COUNT(*) FROM tb_order o WHERE o.store_id = s.id AND o.status = 'DELIVERED')
+     , NOW()
+  FROM tb_store s
+ON DUPLICATE KEY UPDATE average_rating = VALUES(average_rating)
+                      , total_reviews  = VALUES(total_reviews)
+                      , total_orders   = VALUES(total_orders)
+                      , updated_at     = VALUES(updated_at);

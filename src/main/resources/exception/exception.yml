@@ -276,6 +276,14 @@ invalid_store_status:
   code: 61001008
   desc: "가게 영업 상태 값이 올바르지 않습니다."
   status: 400
+owner_store_exists:
+  code: 61001009
+  desc: "이미 등록한 가게가 있습니다."
+  status: 409
+invalid_store_category:
+  code: 61001010
+  desc: "간식 종류가 올바르지 않습니다."
+  status: 400
 
 # ===================================
 # 8. 메뉴 관리 오류 (62000000번대)

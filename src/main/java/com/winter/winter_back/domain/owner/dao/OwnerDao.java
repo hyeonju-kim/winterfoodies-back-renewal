@@ -24,6 +24,7 @@ import java.util.List;
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보, 영업시간 추가
  * 26. 10. 26.       hj kim             매출(날짜별 매출·인기 메뉴·취소 수) 추가
+ * 26. 10. 26.       hj kim             가게 등록 추가
  */
 @Mapper
 public interface OwnerDao {
@@ -31,6 +32,12 @@ public interface OwnerDao {
     Long getOwnerStoreId(@Param("userId") String userId); // 사장님 아이디로 내 가게 ID
 
     OwnerStoreResponse getOwnerStore(@Param("storeId") Long storeId); // 내 가게 정보 + 오늘 현황
+
+    int regStore(OwnerSaveDtos.StoreSave store); // 가게 등록 (영업 종료 상태로 시작)
+
+    int regStoreCategory(@Param("storeId") Long storeId,
+                         @Param("categoryCode") String categoryCode,
+                         @Param("categoryName") String categoryName); // 가게 간식 종류 (검색용 한글 이름)
 
     int modStoreStatus(@Param("storeId") Long storeId, @Param("status") String status); // 영업 상태 변경
 

@@ -15,6 +15,7 @@ import jakarta.validation.constraints.NotBlank;
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
  * 26. 10. 26.       hj kim             내 정보 응답에 사장님 여부·가게 ID 추가
+ * 26. 10. 26.       hj kim             가입 시 사장님 여부(isOwner) 입력 추가
  */
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -27,7 +28,8 @@ public class UserDto {
     private String name;
     private String tel;
 
-    // 내 정보 조회 응답 전용: 사장님 계정이면 true 와 가게 ID (앱이 사장님 화면을 띄울지 판단)
+    // 가입 요청: true 면 사장님으로 가입 (비우면 손님)
+    // 내 정보 조회 응답: 사장님 계정이면 true 와 가게 ID (앱이 사장님 화면을 띄울지 판단)
     private Boolean isOwner;
     private Long storeId;
 }

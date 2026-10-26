@@ -14,6 +14,7 @@ import com.winter.winter_back.domain.owner.dto.OwnerSalesResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerSaveDtos;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
 import com.winter.winter_back.domain.owner.svc.OwnerSvc;
+import com.winter.winter_back.domain.store.dao.StoreDao;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -43,6 +45,8 @@ import java.util.Set;
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보 수정, 영업시간 조회·수정 추가
  * 26. 10. 26.       hj kim             매출 조회(일별·주별·월별, 인기 메뉴) 추가
+ * 26. 10. 26.       hj kim             픽업 완료 시 가게 통계(받아간 주문 수) 다시 계산
+ * 26. 10. 26.       hj kim             가게 등록 추가
  */
 @Slf4j
 @Service
@@ -53,6 +57,14 @@ public class OwnerSvcImpl implements OwnerSvc {
     private static final Set<String> STORE_STATUSES = Set.of("OPEN", "TEMPORARILY_CLOSED", "CLOSED");
     private static final int MAX_LIMIT = 50;
     private static final String DEFAULT_MENU_CATEGORY = "기본";
+    private static final int DEFAULT_WAIT_MINUTES = 10;
+    private static final String DEFAULT_OPEN_TIME = "10:00";
+    private static final String DEFAULT_CLOSE_TIME = "21:00";
+    // 간식 종류 코드 → 한글 이름 (앱 홈 카테고리와 같은 목록)
+    private static final Map<String, String> STORE_CATEGORIES = Map.of(
+            "BUNGEOPPANG", "붕어빵", "HOTTEOK", "호떡", "EOMUK", "어묵", "GUNBAM", "군밤",
+            "GUNGOGUMA", "군고구마", "GYERANPPANG", "계란빵", "TAKOYAKI", "타코야키",
+            "HODUGWAJA", "호두과자", "GUKHWAPPANG", "국화빵", "TTEOKBOKKI", "떡볶이");
     private static final int TOP_MENU_COUNT = 5;
 
     // 주문 단계는 이 순서로만 바뀐다: 접수 → 확인 → 조리 → 픽업대기 → 픽업완료, 확인 단계까지는 거절(취소) 가능
@@ -72,11 +84,58 @@ public class OwnerSvcImpl implements OwnerSvc {
 
     private final OwnerDao ownerDao;
     private final OrderHistoryDao orderHistoryDao;
+    private final StoreDao storeDao;
 
     @Override
     @Transactional(readOnly = true)
     public OwnerStoreResponse getMyStore(String userId) {
         return ownerDao.getOwnerStore(getStoreId(userId));
+    }
+
+    /**
+     * Author      : hj kim
+     * Description : 가게 등록. 사장님 한 명당 한 가게. 영업 종료 상태로 만들고
+     *               기본 영업시간(매일 10:00~21:00)·통계 행·검색용 간식 종류(한글)를 같이 만든다
+     * Date        : 26. 10. 26.
+     */
+    @Override
+    public OwnerStoreResponse regStore(String userId, OwnerRequests.StoreRegisterRequest request) {
+        if (ownerDao.getOwnerStoreId(userId) != null) {
+            throw new BizException("owner_store_exists");
+        }
+        String categoryName = STORE_CATEGORIES.get(request.getCategory());
+        if (categoryName == null) {
+            throw new BizException("invalid_store_category");
+        }
+
+        OwnerSaveDtos.StoreSave store = OwnerSaveDtos.StoreSave.builder()
+                .ownerId(userId)
+                .name(request.getName().trim())
+                .category(request.getCategory())
+                .description(request.getDescription() == null || request.getDescription().isBlank() ? null : request.getDescription().trim())
+                .phone(request.getPhone() == null || request.getPhone().isBlank() ? null : request.getPhone())
+                .address(request.getAddress().trim())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .minOrderAmount(request.getMinOrderAmount() == null ? 0 : request.getMinOrderAmount())
+                .waitMinutes(DEFAULT_WAIT_MINUTES)
+                .build();
+        ownerDao.regStore(store);
+        Long storeId = store.getStoreId();
+
+        ownerDao.regStoreCategory(storeId, request.getCategory(), categoryName);
+        for (DayOfWeek dayOfWeek : DayOfWeek.values()) {
+            OwnerRequests.DayHours day = new OwnerRequests.DayHours();
+            day.setDayOfWeek(dayOfWeek.name());
+            day.setOpenTime(DEFAULT_OPEN_TIME);
+            day.setCloseTime(DEFAULT_CLOSE_TIME);
+            day.setIsHoliday(false);
+            ownerDao.mergeStoreHours(storeId, day);
+        }
+        storeDao.mergeStoreStats(storeId);
+        log.info("[regStore] 사장님 {} 가게 등록 : {} ({})", userId, storeId, store.getName());
+
+        return ownerDao.getOwnerStore(storeId);
     }
 
     /**
@@ -158,6 +217,10 @@ public class OwnerSvcImpl implements OwnerSvc {
                 .createdBy(userId)
                 .createdDatetime(LocalDateTime.now())
                 .build());
+        if (next == OrderStatus.DELIVERED) {
+            // 받아간 주문 수 = "주문 많은 순" 정렬 기준
+            storeDao.mergeStoreStats(storeId);
+        }
         log.info("[modOrderStatus] 가게 {} 주문 {} : {} → {}", storeId, orderId, current, next);
 
         return ownerDao.getOwnerOrder(storeId, orderId);

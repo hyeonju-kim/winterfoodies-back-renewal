@@ -1,5 +1,6 @@
 package com.winter.winter_back.domain.user.service.impl;
 
+import com.winter.winter_back.common.dto.BaseConstant;
 import com.winter.winter_back.common.exception.BizException;
 import com.winter.winter_back.domain.auth.service.AuthService;
 import com.winter.winter_back.domain.user.dao.UserDao;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
  * 26. 10. 26.       hj kim             내 정보 조회·수정, 비밀번호 변경, 회원탈퇴 추가
+ * 26. 10. 26.       hj kim             사장님으로 가입 추가
  */
 @Service
 @RequiredArgsConstructor
@@ -49,9 +51,11 @@ public class UserServiceImpl implements UserService {
 
         userDto.setPw(encodedPassword);
 
+        // 3. 권한: 사장님으로 가입하면 ROLE_OWNER (가게는 로그인 후 가게 등록에서 만든다)
+        boolean isOwner = Boolean.TRUE.equals(userDto.getIsOwner());
         userDao.regUser(userDto);
-        userDao.regUserAuthMap(userDto.getId());
-        log.info("회원가입 완료: {}", userDto.getId());
+        userDao.regUserAuthMap(userDto.getId(), isOwner ? BaseConstant.ROLE_OWNER : BaseConstant.ROLE_DEFAULT);
+        log.info("회원가입 완료: {} ({})", userDto.getId(), isOwner ? "사장님" : "손님");
     }
 
     /**

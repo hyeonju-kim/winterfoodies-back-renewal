@@ -7,6 +7,7 @@ import com.winter.winter_back.domain.order.dto.OrderStatus;
 import com.winter.winter_back.domain.review.dao.ReviewDao;
 import com.winter.winter_back.domain.review.dto.*;
 import com.winter.winter_back.domain.review.service.ReviewService;
+import com.winter.winter_back.domain.store.dao.StoreDao;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
  * -----------------------------------------------------------
  * 25. 9. 2.         hj kim             최초 생성
  * 26. 10. 26.       hj kim             받아간 주문만 리뷰 작성·작성 가능 여부에 본인·상태 확인, 공개 목록 작성자 아이디 숨김·이름 가림
+ * 26. 10. 26.       hj kim             리뷰 작성·수정·삭제 시 가게 통계(별점·리뷰 수) 다시 계산
  */
 
 @Slf4j
@@ -36,6 +38,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewDao reviewDao;
     private final OrderDao orderDao;
+    private final StoreDao storeDao;
 
     @Override
     public ReviewListResponse getStoreReviews(Long storeId, int page, int limit) {
@@ -138,6 +141,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new BizException("fail_add");
         }
 
+        storeDao.mergeStoreStats(request.getStoreId());
         log.info("리뷰 작성 완료 - userId: {}, storeId: {}, reviewId: {}", userId, request.getStoreId(), reviewDto.getIdx());
 
         // TODO tb_order 에 review_id 업데이트 추가
@@ -167,6 +171,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new BizException("fail_update");
         }
 
+        storeDao.mergeStoreStats(existingReview.getStoreId());
         log.info("리뷰 수정 완료 - userId: {}, reviewId: {}", userId, reviewId);
     }
 
@@ -187,6 +192,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new BizException("fail_remove");
         }
 
+        storeDao.mergeStoreStats(existingReview.getStoreId());
         log.info("리뷰 삭제 완료 - userId: {}, reviewId: {}", userId, reviewId);
     }
 

@@ -21,10 +21,13 @@ import java.util.List;
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보, 영업시간 추가
  * 26. 10. 26.       hj kim             매출 조회 추가
+ * 26. 10. 26.       hj kim             가게 등록 추가
  */
 public interface OwnerSvc {
 
     OwnerStoreResponse getMyStore(String userId); // 내 가게 + 오늘 현황
+
+    OwnerStoreResponse regStore(String userId, OwnerRequests.StoreRegisterRequest request); // 가게 등록 (사장님 한 명당 한 가게)
 
     OwnerStoreResponse modStoreStatus(String userId, OwnerRequests.StoreStatusRequest request); // 영업 상태 변경
 
