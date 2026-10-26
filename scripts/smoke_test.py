@@ -164,7 +164,7 @@ class SmokeTest:
                           check=lambda data: check_amount(data, 7000))
         order_id = order.get('orderId')
         # 옵션 추가금 반영: (3000 + 1000) x 2 + 배달비 1000 = 9000
-        self.call('주문 생성(옵션 추가금)', 'POST', '/orders',
+        option_order = self.call('주문 생성(옵션 추가금)', 'POST', '/orders',
                   {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 2, 'options': [{'optionId': 1}]}],
                    'orderType': 'DELIVERY', 'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
                   check=lambda data: check_amount(data, 9000))
@@ -275,7 +275,10 @@ class SmokeTest:
         if owner_token:
             self.run_owner(owner_token, access_token, pickup_body)
 
-        # 정리
+        # 정리 (접수 상태로 남는 주문이 사장님 새 주문에 쌓이지 않게 모두 취소)
+        if option_order.get('orderId'):
+            self.call('옵션 주문 취소', 'PUT', '/orders/%s/cancel' % option_order['orderId'], {'reason': 'test'},
+                      token=access_token)
         if order_id:
             self.call('주문 취소', 'PUT', '/orders/%s/cancel' % order_id, {'reason': 'test'}, token=access_token)
         self.call('찜 해제', 'DELETE', '/favorites/1', token=access_token)
