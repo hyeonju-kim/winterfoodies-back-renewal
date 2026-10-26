@@ -47,8 +47,6 @@ public class AuthController {
     @PostMapping("/auth/refresh")
     public TokenVo refreshToken(HttpServletRequest request,
                                 @RequestBody RefreshTokenRequest refreshRequest) {
-        log.debug("[refreshToken] > [request] === {}", request);
-        log.debug("[refreshToken] > [refreshRequest] === {}", refreshRequest);
 
         return authService.refreshToken(request, refreshRequest);
     }
@@ -62,7 +60,6 @@ public class AuthController {
     public void logout(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo, HttpServletRequest request) {
         try {
             String token = TokenProvider.getAccessTokenFromHeader(request);
-            log.debug("[logout] token: {}", token);
 
             if (token != null && loginUserInfo != null) {
                 authService.logout(loginUserInfo.getUserId());

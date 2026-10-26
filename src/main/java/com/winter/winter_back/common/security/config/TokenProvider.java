@@ -290,7 +290,6 @@ public class TokenProvider {
      * @throws BizException TokenProvider가 초기화되지 않았거나 토큰 파싱 실패 시
      */
     public static Authentication getAuthentication(String accessToken) {
-        log.info("[getAuthentication] accessToken: {}", accessToken);
 
         if (!isBuild()) {
             throw new BizException("token_not_build");
@@ -303,7 +302,6 @@ public class TokenProvider {
         }
 
         Claims claims = parseClaims(accessToken);
-        log.info("[getAuthentication] claims: {}", claims);
 
         // 권한이 없는 사용자는 빈 문자열로 저장되므로, 빈 값은 걸러 권한 없이 인증한다
         Object authoritiesClaim = claims.get(authKey);
@@ -400,7 +398,6 @@ public class TokenProvider {
      */
     public static String getAccessTokenFromHeader(HttpServletRequest request) {
         String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-        log.info("[getAccessTokenFromHeader] bearerToken: {}", bearerToken);
 
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
             return bearerToken.substring(7);

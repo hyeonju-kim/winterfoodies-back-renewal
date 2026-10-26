@@ -62,7 +62,6 @@ public class AuthService {
     public TokenVo login(LoginRequest loginRequest) {
         // 1. 사용자 기본 정보 조회 (ID, 이름, 연락처 등)
         ComLoginUserInfoDto userInfo = securitySupportDao.selectUser(loginRequest.getUsername());
-        log.info("[login] > [userInfo] === {}", userInfo);
 
         if (userInfo == null) {
             log.error("User not found: {}", loginRequest.getUsername());
@@ -121,7 +120,6 @@ public class AuthService {
 
         // 2. Access Token 추출 (헤더 또는 요청 body에서)
         String accessToken = TokenProvider.getAccessTokenFromHeader(request);
-        log.info("[refreshToken] > [accessToken] === {}", accessToken);
 
         if (!StringUtils.hasText(accessToken)) {
             accessToken = refreshRequest.getAccessToken();
@@ -132,7 +130,6 @@ public class AuthService {
 
         // 3. 만료된 Access Token에서 사용자 정보 추출 (만료되어도 사용자명은 추출 가능)
         Authentication authentication = TokenProvider.getAuthentication(accessToken);
-        log.info("[refreshToken] > [authentication] === {}", authentication);
 
         if (authentication == null) {
             throw new BizException("token_wrong");
@@ -158,7 +155,6 @@ public class AuthService {
         log.info("[refreshToken] > [winterCache] === {}", winterCache.getName());
 
         Cache.ValueWrapper valueWrapper = winterCache.get(userId);
-        log.info("[refreshToken] > [valueWrapper] === {}", valueWrapper);
 
         if (valueWrapper == null) {
             log.warn("[refreshToken] > 캐시에서 사용자 {} 의 토큰 정보를 찾을 수 없습니다.", userId);
@@ -195,7 +191,6 @@ public class AuthService {
 
         // 10. 새로운 토큰 쌍 생성
         TokenVo newToken = tokenManage(userId, userInfo);
-        log.info("[refreshToken] > [newToken] === {}", newToken);
 
         log.info("[refreshToken] > 토큰 갱신 완료. userId: {}", userId);
         return newToken;
@@ -210,7 +205,6 @@ public class AuthService {
      */
     private TokenVo tokenManage(String userId, ComLoginUserInfoDto userInfo) {
         log.info("[tokenManage] > [userId] === {}", userId);
-        log.info("[tokenManage] > [userInfo] === {}", userInfo);
 
         // 1. 사용자 권한을 Spring Security의 GrantedAuthority 형태로 변환
         // 예: ComRoleUserDto의 roleId "ROLE_ADMIN" -> SimpleGrantedAuthority("ROLE_ADMIN")

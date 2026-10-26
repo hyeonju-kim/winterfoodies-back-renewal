@@ -40,7 +40,6 @@ public class UserServiceImpl implements UserService {
 
         // 2. 비밀번호 암호화해서 저장
         String encodedPassword = passwordEncoder.encode(userDto.getPw());
-        log.info("[register] > [encodedPassword] === {}", encodedPassword);
 
         userDto.setPw(encodedPassword);
 

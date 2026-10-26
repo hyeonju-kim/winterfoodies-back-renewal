@@ -45,8 +45,6 @@ public class TokenFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String token = TokenProvider.getAccessTokenFromHeader(request);
-        log.info("[doFilterInternal] > [request] === {}", request);
-        log.info("[doFilterInternal] > [token] === {}", token);
 
         if (StringUtils.hasText(token)) {
             int valid = TokenProvider.validToken(token);
