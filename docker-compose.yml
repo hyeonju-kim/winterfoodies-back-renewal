@@ -1,0 +1,28 @@
+# 로컬 개발용 MariaDB + Redis
+# 실행: DB_ROOT_PASSWORD 환경변수(또는 .env)를 지정한 뒤 docker compose up -d
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: winter-mariadb
+    ports:
+      - "3307:3306"
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
+      MARIADB_DATABASE: winter_app
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - winter-mariadb-data:/var/lib/mysql
+      # 최초 기동 시 db/init 아래 SQL 을 순서대로 실행 (스키마 → 시드)
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+
+  redis:
+    image: redis:7.4
+    container_name: winter-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  winter-mariadb-data:
