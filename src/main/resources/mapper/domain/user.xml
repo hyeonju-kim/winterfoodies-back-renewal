@@ -54,12 +54,21 @@
         SQL ID: com.winter.winter_back.domain.user.dao.UserDao.getUser
         SQL 명: 사용 중인 회원 정보 조회
         */
-        SELECT  id
-             ,  name
-             ,  tel
-        FROM    tb_user
-        WHERE   id = #{userId}
-          AND   use_yn = 'Y'
+        SELECT  u.id
+             ,  u.name
+             ,  u.tel
+             ,  EXISTS (SELECT 1
+                          FROM tb_auth_user_map a
+                         WHERE a.user_id = u.id
+                           AND a.auth_id = 'ROLE_OWNER')   AS is_owner
+             ,  (SELECT s.id
+                   FROM tb_store s
+                  WHERE s.owner_id = u.id
+                  ORDER BY s.id
+                  LIMIT 1)                                 AS store_id
+        FROM    tb_user u
+        WHERE   u.id = #{userId}
+          AND   u.use_yn = 'Y'
     </select>
 
     <!-- 비밀번호 확인용 조회 -->

@@ -81,10 +81,12 @@ CREATE TABLE IF NOT EXISTS tb_store (
     delivery_time     INT           NULL     COMMENT '예상 배달시간(분)',
     business_number   VARCHAR(20)   NULL     COMMENT '사업자등록번호',          -- 추정
     is_featured       TINYINT(1)    NOT NULL DEFAULT 0 COMMENT '추천 매장 여부',
+    owner_id          VARCHAR(50)   NULL     COMMENT '사장님 아이디 (→ tb_user.id, ROLE_OWNER)',
     created_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '등록일시',
     updated_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
     PRIMARY KEY (id),
     KEY idx_store_status (status),
+    KEY idx_store_owner (owner_id),
     KEY idx_store_category (category),
     KEY idx_store_created (created_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '매장';

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.winter.winter_back.domain.owner.dao.OwnerDao">
+
+    <!-- 사장님 아이디로 내 가게 ID (한 사장님 = 가게 하나) -->
+    <select id="getOwnerStoreId" resultType="java.lang.Long">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getOwnerStoreId
+        SQL 명: 사장님 가게 ID 조회
+        */
+        SELECT id
+          FROM tb_store
+         WHERE owner_id = #{userId}
+         ORDER BY id
+         LIMIT 1
+    </select>
+
+    <!-- 내 가게 정보 + 오늘 현황 -->
+    <select id="getOwnerStore" resultType="com.winter.winter_back.domain.owner.dto.OwnerStoreResponse">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getOwnerStore
+        SQL 명: 사장님 가게 정보와 오늘 주문·매출 현황
+        */
+        SELECT s.id            AS store_id
+             , s.name
+             , s.category
+             , s.address
+             , s.phone
+             , (SELECT i.image_url
+                  FROM tb_store_image i
+                 WHERE i.store_id = s.id
+                 ORDER BY i.sort_order
+                 LIMIT 1)      AS image_url
+             , s.status
+             , s.delivery_time AS wait_minutes
+             , (SELECT COUNT(*)
+                  FROM tb_order o
+                 WHERE o.store_id = s.id
+                   AND o.created_datetime &gt;= CURDATE()
+                   AND o.status != 'CANCELLED')            AS today_order_count
+             , (SELECT COALESCE(SUM(o.total_amount), 0)
+                  FROM tb_order o
+                 WHERE o.store_id = s.id
+                   AND o.created_datetime &gt;= CURDATE()
+                   AND o.status = 'DELIVERED')             AS today_sales
+             , (SELECT COUNT(*)
+                  FROM tb_order o
+                 WHERE o.store_id = s.id
+                   AND o.status = 'PENDING')               AS new_order_count
+             , (SELECT COUNT(*)
+                  FROM tb_order o
+                 WHERE o.store_id = s.id
+                   AND o.status IN ('CONFIRMED', 'PREPARING', 'DELIVERING')) AS in_progress_order_count
+          FROM tb_store s
+         WHERE s.id = #{storeId}
+    </select>
+
+    <!-- 영업 상태 변경 -->
+    <update id="modStoreStatus">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.modStoreStatus
+        SQL 명: 가게 영업 상태 변경
+        */
+        UPDATE tb_store
+           SET status = #{status}
+         WHERE id = #{storeId}
+    </update>
+
+    <!-- 대기시간 변경 -->
+    <update id="modStoreWaitTime">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.modStoreWaitTime
+        SQL 명: 가게 대기시간(조리 예상 시간) 변경
+        */
+        UPDATE tb_store
+           SET delivery_time = #{minutes}
+         WHERE id = #{storeId}
+    </update>
+
+    <!-- 주문 목록·단건 공통 컬럼 -->
+    <sql id="ownerOrderColumns">
+        SELECT o.order_id
+             , o.status
+             , o.order_type
+             , o.total_amount
+             , o.payment_method
+             , o.delivery_phone   AS contact_phone
+             , o.order_request
+             , (SELECT GROUP_CONCAT(CONCAT(m.name, ' x', oi.quantity) ORDER BY oi.order_item_id SEPARATOR ', ')
+                  FROM tb_order_items oi
+                  JOIN tb_menus m ON m.id = oi.menu_id
+                 WHERE oi.order_id = o.order_id)          AS item_summary
+             , (SELECT COALESCE(SUM(oi.quantity), 0)
+                  FROM tb_order_items oi
+                 WHERE oi.order_id = o.order_id)          AS item_count
+             , o.created_datetime AS ordered_at
+          FROM tb_order o
+    </sql>
+
+    <sql id="ownerOrderStatusFilter">
+        <if test="statuses != null and !statuses.isEmpty()">
+           AND o.status IN
+            <foreach collection="statuses" item="status" open="(" separator="," close=")">
+                #{status}
+            </foreach>
+        </if>
+    </sql>
+
+    <!-- 내 가게 주문 목록 (최신순) -->
+    <select id="getOwnerOrderList" resultType="com.winter.winter_back.domain.owner.dto.OwnerOrderResponse">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getOwnerOrderList
+        SQL 명: 사장님 가게 주문 목록
+        */
+        <include refid="ownerOrderColumns"/>
+         WHERE o.store_id = #{storeId}
+        <include refid="ownerOrderStatusFilter"/>
+         ORDER BY o.created_datetime DESC
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 내 가게 주문 수 -->
+    <select id="getOwnerOrderCount" resultType="int">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getOwnerOrderCount
+        SQL 명: 사장님 가게 주문 수
+        */
+        SELECT COUNT(*)
+          FROM tb_order o
+         WHERE o.store_id = #{storeId}
+        <include refid="ownerOrderStatusFilter"/>
+    </select>
+
+    <!-- 내 가게 주문 한 건 -->
+    <select id="getOwnerOrder" resultType="com.winter.winter_back.domain.owner.dto.OwnerOrderResponse">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getOwnerOrder
+        SQL 명: 사장님 가게 주문 단건
+        */
+        <include refid="ownerOrderColumns"/>
+         WHERE o.store_id = #{storeId}
+           AND o.order_id = #{orderId}
+    </select>
+
+    <!-- 주문 단계 변경 (지금 상태가 fromStatus 일 때만) -->
+    <update id="modOrderStatus">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.modOrderStatus
+        SQL 명: 사장님 주문 단계 변경
+        */
+        UPDATE tb_order
+           SET status           = #{toStatus}
+             , updated_datetime = NOW()
+         WHERE store_id = #{storeId}
+           AND order_id = #{orderId}
+           AND status   = #{fromStatus}
+    </update>
+
+    <!-- 내 가게 메뉴 목록 -->
+    <select id="getOwnerMenuList" resultType="com.winter.winter_back.domain.owner.dto.OwnerMenuResponse">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getOwnerMenuList
+        SQL 명: 사장님 가게 메뉴 목록
+        */
+        SELECT m.id            AS menu_id
+             , c.name          AS category_name
+             , m.name
+             , m.price
+             , m.image_url
+             , m.is_sold_out
+          FROM tb_menus m
+          LEFT JOIN tb_menu_category c ON c.id = m.category_id
+         WHERE m.store_id = #{storeId}
+           AND m.is_active = 1
+         ORDER BY c.sort_order, m.sort_order, m.id
+    </select>
+
+    <!-- 메뉴 품절 켜고 끄기 -->
+    <update id="modMenuSoldOut">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.modMenuSoldOut
+        SQL 명: 메뉴 품절 여부 변경
+        */
+        UPDATE tb_menus
+           SET is_sold_out = #{isSoldOut}
+         WHERE id = #{menuId}
+           AND store_id = #{storeId}
+           AND is_active = 1
+    </update>
+
+</mapper>

@@ -14,6 +14,7 @@ import jakarta.validation.constraints.NotBlank;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
+ * 26. 10. 26.       hj kim             내 정보 응답에 사장님 여부·가게 ID 추가
  */
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -25,4 +26,8 @@ public class UserDto {
     @NotBlank(message = "이름을 입력해주세요")
     private String name;
     private String tel;
+
+    // 내 정보 조회 응답 전용: 사장님 계정이면 true 와 가게 ID (앱이 사장님 화면을 띄울지 판단)
+    private Boolean isOwner;
+    private Long storeId;
 }

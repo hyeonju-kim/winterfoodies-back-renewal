@@ -76,3 +76,11 @@ INSERT IGNORE INTO tb_notice (idx, title, content, is_pinned, is_visible, create
     (2, '겨울 간식 시즌 오픈', '붕어빵·호떡·군고구마 가게가 하나둘 문을 열고 있어요.\n가까운 가게를 찜해 두면 찜 탭에서 모아볼 수 있습니다.', 'N', 'Y', '2026-10-22 09:00:00', 'admin'),
     (3, '리뷰 작성 안내', '받아간 주문에 한해 주문내역 > 주문 상세에서 리뷰를 쓸 수 있어요.', 'N', 'Y', '2026-10-25 18:00:00', 'admin'),
     (4, '[비공개] 점검 예정 공지 초안', '아직 공개하지 않은 공지입니다.', 'N', 'N', '2026-10-26 08:00:00', 'admin');
+
+-- 사장님 계정 2개 (비밀번호 Owner1234!, BCrypt) - owner1 은 1번 매장, owner2 는 2번 매장 사장님
+INSERT IGNORE INTO tb_user (id, pw, name, tel) VALUES
+    ('owner1', '$2a$10$iwSPjPUYnxU1SQQCPCcD7uDHOTDUZ/bhBQ7yAp3ON4M46dDHnJNu6', '붕어빵 사장님', '01090001111'),
+    ('owner2', '$2a$10$iwSPjPUYnxU1SQQCPCcD7uDHOTDUZ/bhBQ7yAp3ON4M46dDHnJNu6', '호떡 사장님',   '01090002222');
+INSERT IGNORE INTO tb_auth_user_map (auth_id, user_id) VALUES ('ROLE_OWNER', 'owner1'), ('ROLE_OWNER', 'owner2');
+UPDATE tb_store SET owner_id = 'owner1' WHERE id = 1;
+UPDATE tb_store SET owner_id = 'owner2' WHERE id = 2;

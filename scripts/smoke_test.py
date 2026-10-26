@@ -17,7 +17,6 @@ API 스모크(회귀) 테스트 - 주요 API 를 실제 서버에 순서대로 �
 """
 import argparse
 import json
-import subprocess
 import sys
 import time
 import urllib.error
@@ -46,6 +45,14 @@ NOTICE_NOT_FOUND = '64002001'
 INVALID_PASSWORD = '60001004'
 USER_NOT_FOUND = '60001001'
 DUPLICATED = '41002001'
+PERMISSION_DENIED = '40002001'
+MENU_SOLD_OUT = '62001003'
+INVALID_ORDER_STATUS_CHANGE = '63001013'
+REJECT_REASON_REQUIRED = '63001014'
+INVALID_STORE_STATUS = '61001008'
+ORDER_NOT_FOUND = '63001001'
+OWNER_ID, OWNER_PASSWORD = 'owner1', 'Owner1234!'      # 테스트 데이터: 1번 매장 사장님
+OTHER_OWNER_ID = 'owner2'                              # 2번 매장 사장님
 HIDDEN_NOTICE_ID = 4  # 테스트 데이터의 비공개 공지
 CLOSED_STORE_ID = 8  # 테스트 데이터의 영업 종료(CLOSED) 매장
 
@@ -225,7 +232,23 @@ class SmokeTest:
                       expected_code=REVIEW_ORDER_NOT_COMPLETED)
         review_order = self.call('리뷰용 포장 주문 생성', 'POST', '/orders', pickup_body, token=access_token)
         review_order_id = review_order.get('orderId')
-        if review_order_id and mark_order_delivered(review_order_id):
+        # 사장님이 확인 → 조리 → 픽업대기 → 픽업완료로 처리
+        owner_token = self.call('[사장님] 로그인', 'POST', '/login',
+                                {'username': OWNER_ID, 'password': OWNER_PASSWORD}).get('accessToken')
+        is_delivered = False
+        if review_order_id and owner_token:
+            for next_status in ('CONFIRMED', 'PREPARING', 'DELIVERING', 'DELIVERED'):
+                changed = self.call('[사장님] 주문 단계 → %s' % next_status, 'PATCH',
+                                    '/owner/orders/%s/status' % review_order_id, {'status': next_status},
+                                    token=owner_token,
+                                    check=lambda data, expected=next_status: None if data.get('status') == expected
+                                    else 'status=%s' % data.get('status'))
+                is_delivered = changed.get('status') == 'DELIVERED'
+            self.call('[손님] 진행 이력에 사장님 처리 단계', 'GET', '/orders/%s/tracking' % review_order_id,
+                      token=access_token,
+                      check=lambda data: None if [h.get('status') for h in data.get('histories', [])][-1:] == ['ORDER_DELIVERED']
+                      else '마지막 이력=%s' % [h.get('status') for h in data.get('histories', [])][-1:])
+        if is_delivered:
             self.call('받아간 주문 리뷰 작성 가능', 'GET', '/reviews/order/%s/writable' % review_order_id,
                       token=access_token, check=lambda data: None if data is True else '작성 가능해야 함')
             self.call('리뷰 작성', 'POST', '/reviews',
@@ -234,8 +257,6 @@ class SmokeTest:
             self.call('같은 주문 리뷰 중복 거부', 'POST', '/reviews',
                       {'storeId': 1, 'orderOrderId': review_order_id, 'rating': 4, 'content': 'again'},
                       token=access_token, expected_code=REVIEW_ALREADY_EXISTS)
-        else:
-            print('SKIP  리뷰 작성 성공 흐름 (DB 컨테이너에 접근할 수 없어 주문 완료 처리를 못 함)')
         self.call('가게 리뷰 목록(작성자 아이디 숨김)', 'GET', '/reviews/store/1',
                   check=lambda data: None if all(review.get('userId') is None for review in data.get('dataList', []))
                   else '공개 목록에 userId 노출')
@@ -250,6 +271,9 @@ class SmokeTest:
                   else '고정 공지가 맨 위가 아니거나 비공개·본문 포함')
         self.call('공지 상세', 'GET', '/notices/1', check=lambda data: None if data.get('content') else '본문 없음')
         self.call('비공개 공지 상세 거부', 'GET', '/notices/%d' % HIDDEN_NOTICE_ID, expected_code=NOTICE_NOT_FOUND)
+
+        if owner_token:
+            self.run_owner(owner_token, access_token, pickup_body)
 
         # 정리
         if order_id:
@@ -278,6 +302,66 @@ class SmokeTest:
                   {'storeId': 1, 'orderOrderId': 'X', 'rating': 5, 'content': 'x'}, expected_code=UNAUTHORIZED)
 
         self.run_account_settings(user_id + 's', password)
+
+    def run_owner(self, owner_token, customer_token, pickup_body):
+        """사장님: 권한·내 가게·대기시간·영업 상태·주문 거절·순서 위반·다른 가게 주문·품절"""
+        self.call('[사장님] 내 정보에 사장님·가게 표시', 'GET', '/user/me', token=owner_token,
+                  check=lambda data: None if data.get('isOwner') is True and data.get('storeId') == 1
+                  else 'isOwner=%s storeId=%s' % (data.get('isOwner'), data.get('storeId')))
+        self.call('[손님] 내 정보는 사장님 아님', 'GET', '/user/me', token=customer_token,
+                  check=lambda data: None if data.get('isOwner') is False else 'isOwner=%s' % data.get('isOwner'))
+        self.call('[손님] 사장님 API 거부', 'GET', '/owner/store', token=customer_token, expected_code=PERMISSION_DENIED)
+        self.call('[사장님] 내 가게·오늘 현황', 'GET', '/owner/store', token=owner_token,
+                  check=lambda data: None if data.get('storeId') == 1 and data.get('todayOrderCount') is not None
+                  else '가게 정보 없음')
+
+        # 대기시간: 손님 가게 상세의 조리 시간으로 보인다
+        self.call('[사장님] 대기시간 25분', 'PATCH', '/owner/store/wait-time', {'minutes': 25}, token=owner_token)
+        self.call('[손님] 가게 상세에 대기시간 반영', 'GET', '/stores/1',
+                  check=lambda data: None if data.get('store', {}).get('deliveryTime') == 25
+                  else 'deliveryTime=%s' % data.get('store', {}).get('deliveryTime'))
+        self.call('[사장님] 대기시간 범위 초과 거부', 'PATCH', '/owner/store/wait-time', {'minutes': 500},
+                  token=owner_token, expected_code=INVALID_INPUT)
+        self.call('[사장님] 대기시간 원래대로', 'PATCH', '/owner/store/wait-time', {'minutes': 20}, token=owner_token)
+
+        # 영업 상태: 잠시 쉼이면 손님 주문 거부
+        self.call('[사장님] 잠시 쉼', 'PATCH', '/owner/store/status', {'status': 'TEMPORARILY_CLOSED'}, token=owner_token)
+        self.call('[손님] 쉬는 가게 주문 거부', 'POST', '/orders', pickup_body, token=customer_token,
+                  expected_code=RESTAURANT_CLOSED)
+        self.call('[사장님] 잘못된 영업 상태 거부', 'PATCH', '/owner/store/status', {'status': 'SLEEPING'},
+                  token=owner_token, expected_code=INVALID_STORE_STATUS)
+        self.call('[사장님] 영업 재개', 'PATCH', '/owner/store/status', {'status': 'OPEN'}, token=owner_token)
+
+        # 주문 거절·순서 위반·다른 가게
+        order = self.call('[손님] 거절용 주문', 'POST', '/orders', pickup_body, token=customer_token)
+        order_id = order.get('orderId')
+        if order_id:
+            self.call('[사장님] 단계 건너뛰기 거부(접수→픽업완료)', 'PATCH', '/owner/orders/%s/status' % order_id,
+                      {'status': 'DELIVERED'}, token=owner_token, expected_code=INVALID_ORDER_STATUS_CHANGE)
+            self.call('[사장님] 사유 없는 거절 거부', 'PATCH', '/owner/orders/%s/status' % order_id,
+                      {'status': 'CANCELLED'}, token=owner_token, expected_code=REJECT_REASON_REQUIRED)
+            other_token = self.call('[다른 사장님] 로그인', 'POST', '/login',
+                                    {'username': OTHER_OWNER_ID, 'password': OWNER_PASSWORD}).get('accessToken')
+            self.call('[다른 사장님] 남의 가게 주문 처리 거부', 'PATCH', '/owner/orders/%s/status' % order_id,
+                      {'status': 'CONFIRMED'}, token=other_token, expected_code=ORDER_NOT_FOUND)
+            self.call('[사장님] 새 주문 목록에 보임', 'GET', '/owner/orders?status=PENDING', token=owner_token,
+                      check=lambda data: None if any(o.get('orderId') == order_id for o in data.get('dataList', []))
+                      else '새 주문 목록에 없음')
+            self.call('[사장님] 주문 거절', 'PATCH', '/owner/orders/%s/status' % order_id,
+                      {'status': 'CANCELLED', 'reason': '재료 소진'}, token=owner_token,
+                      check=lambda data: None if data.get('status') == 'CANCELLED' else 'status=%s' % data.get('status'))
+            self.call('[사장님] 거절한 주문 다시 처리 거부', 'PATCH', '/owner/orders/%s/status' % order_id,
+                      {'status': 'CONFIRMED'}, token=owner_token, expected_code=INVALID_ORDER_STATUS_CHANGE)
+
+        # 품절: 손님은 품절 메뉴를 주문할 수 없다
+        self.call('[사장님] 메뉴 목록', 'GET', '/owner/menus', token=owner_token,
+                  check=lambda data: None if isinstance(data, list) and data else '메뉴 없음')
+        self.call('[사장님] 팥 붕어빵 품절', 'PATCH', '/owner/menus/1/sold-out', {'isSoldOut': True}, token=owner_token)
+        self.call('[손님] 품절 메뉴 주문 거부', 'POST', '/orders', pickup_body, token=customer_token,
+                  expected_code=MENU_SOLD_OUT)
+        self.call('[사장님] 품절 해제', 'PATCH', '/owner/menus/1/sold-out', {'isSoldOut': False}, token=owner_token)
+        self.call('[사장님] 남의 가게 메뉴 품절 거부', 'PATCH', '/owner/menus/3/sold-out', {'isSoldOut': True},
+                  token=owner_token, expected_code=MENU_NOT_FOUND)
 
     def run_account_settings(self, user_id, password):
         """환경설정: 내 정보 수정 → 비밀번호 변경(모든 토큰 무효화) → 회원탈퇴(같은 아이디 재가입 불가)"""
@@ -325,17 +409,6 @@ class SmokeTest:
         passed_count = sum(1 for result in self.results if result[1])
         print('\n결과: %d / %d 통과' % (passed_count, len(self.results)))
         return passed_count == len(self.results)
-
-
-def mark_order_delivered(order_id, container='winter-mariadb'):
-    """사장님 API 가 생기기 전까지 주문 완료(DELIVERED) 처리는 로컬 DB 컨테이너에 직접 한다. 실패하면 False"""
-    sql = "UPDATE tb_order SET status = 'DELIVERED' WHERE order_id = '%s'" % order_id
-    command = ['docker', 'exec', container, 'sh', '-c',
-               'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" winter_app -e "%s"' % sql]
-    try:
-        return subprocess.run(command, capture_output=True, timeout=20).returncode == 0
-    except (OSError, subprocess.SubprocessError):
-        return False
 
 
 def check_amount(data, expected_amount):

@@ -329,7 +329,7 @@
 ### 검증
 - 스모크 테스트 67 → **70/70 통과** (공지 목록: 고정이 맨 위·비공개 제외·본문 없음 / 공지 상세 본문 있음 / 비공개 공지 상세 404)
 
-## 2026-10-26 16:44 환경설정 API - 내 정보 수정·비밀번호 변경·회원탈퇴 (미커밋)
+## 2026-10-26 16:44 환경설정 API - 내 정보 수정·비밀번호 변경·회원탈퇴 (3e7a3ef, 11파일 +341 / -25, push 완료)
 
 ### 구현
 - `GET /user/me` 를 **DB 조회로 변경**: 전에는 로그인 토큰에 담긴 이름·전화번호를 그대로 돌려줘서, 정보를 수정해도 다시 로그인하기 전까지 옛 값이 보였음
@@ -347,3 +347,29 @@
 ### 검증
 - 스모크 테스트 70 → **87/87 통과** (설정 17건: 정보 수정·바로 반영·전화번호 형식·이름 빈 값 / 현재 비밀번호 틀림·8자 미만·변경·변경 전 토큰 거부·옛 비밀번호 로그인 거부·새 비밀번호 로그인 / 탈퇴 비밀번호 틀림·탈퇴·탈퇴 후 토큰 거부·로그인 거부·같은 아이디 재가입 거부)
 - 메모: 서버는 계정당 refresh 토큰을 하나만 보관해서, 같은 계정으로 다른 곳(스크립트 등)에서 로그인하면 앱의 토큰 갱신이 실패해 로그아웃된다(의도된 동작으로 보임, 에뮬레이터 확인 중 실제로 겪음)
+
+## 2026-10-26 16:53 사장님 1묶음 - 사장님 API (가게 연결·영업 상태·대기시간·주문 단계·품절, 미커밋)
+
+### 배경
+- 서비스 차별점("줄 없는 픽업 + 사장님이 직접 누르는 영업중/품절/대기시간")의 사장님 쪽. 옛날 앱 사장님 화면 6개는 가짜 데이터로만 돌아가고 백엔드에 사장님 API 가 하나도 없었음
+- 범위: 이번엔 핵심만(영업 상태·대기시간·주문 처리·품절). 재고·매출 분석 그래프·메뉴 추가/수정/삭제·사장님 가입/가게 등록은 다음
+
+### 구현
+- **가게 ↔ 사장님 연결**: `tb_store.owner_id` 컬럼 + 인덱스 (`db/init/01_schema.sql`, 로컬 DB 는 ALTER). 한 사장님 = 가게 하나
+- **테스트 사장님 계정**: owner1(붕어빵 하우스)·owner2(호떡 코너), 비밀번호 Owner1234!(BCrypt 해시로 `db/test/01_test_data.sql` 에), 권한 ROLE_OWNER(시드에 이미 정의돼 있던 역할)
+- **권한**: `SecurityConfig` 에 `/owner/**` → `hasRole("OWNER")` (손님이 부르면 403 permission_denied). 어느 가게인지는 서비스가 로그인 아이디로 내 가게 ID 를 찾아 모든 쿼리를 그 가게로 한정
+- **내 정보(`GET /user/me`)에 `isOwner`·`storeId`** 추가 → 앱이 로그인 후 사장님 화면을 띄울지 판단
+- `domain/owner` 신규 (ctrl/dao/dto/svc/impl + `mapper/domain/owner.xml`, 컨벤션 주석)
+  - `GET /owner/store` 내 가게 + 오늘 현황(오늘 주문 수·오늘 매출(픽업완료 합)·새 주문·처리 중)
+  - `PATCH /owner/store/status` 영업중 OPEN / 잠시 쉼 TEMPORARILY_CLOSED / 영업종료 CLOSED (그 밖 값 `invalid_store_status`). 영업중이 아니면 손님 주문이 거부됨(기존 restaurant_closed)
+  - `PATCH /owner/store/wait-time` 대기시간 0~120분 → 손님 화면 "조리 약 N분"(tb_store.delivery_time 재사용, 새 컬럼 없음)
+  - `GET /owner/orders?status=PENDING&status=...` 내 가게 주문(최신순, 메뉴 요약 "팥 붕어빵 x2, …"·수량 합·연락처·요청사항)
+  - `PATCH /owner/orders/{id}/status` **주문 단계 변경**: 접수→확인→조리→픽업대기→픽업완료 순서로만, 확인 단계까지 거절(CANCELLED, 사유 필수 `reject_reason_required`). 순서 위반 `invalid_order_status_change`. **"지금 상태가 확인한 상태일 때만" UPDATE**(0건이면 거부) → 손님이 같은 순간 취소해도 덮어쓰지 않음. 바뀔 때마다 손님 진행 이력(`ORDER_CONFIRMED`·`ORDER_PREPARING`·`ORDER_DELIVERING`·`ORDER_DELIVERED`·`ORDER_CANCELLED` + 포장 문구, 거절은 사유 포함) 기록. 다른 가게 주문은 "없는 주문"으로 응답
+  - `GET /owner/menus`, `PATCH /owner/menus/{id}/sold-out` 품절 켜고 끄기(내 가게 메뉴만, 아니면 menu_not_found) → 손님은 품절 메뉴 주문 불가(기존 menu_sold_out)
+- 오류 코드 4개: owner_store_not_found(61001007)·invalid_store_status(61001008)·invalid_order_status_change(63001013)·reject_reason_required(63001014)
+- 예전 `confirmOrder` 서비스 메서드·`OrderConfirmRequest/Response` 는 호출하는 곳이 없어 정리 대상으로 주석만 달아 둠 (파일 삭제는 확인 후)
+
+### 검증
+- 스모크 테스트 87 → **118/118 통과**
+  - 리뷰 흐름의 "주문 완료 처리"를 **로컬 DB 직접 UPDATE(임시 헬퍼) → 사장님 API 로 교체**(확인→조리→픽업대기→픽업완료 + 손님 진행 이력 마지막이 ORDER_DELIVERED)
+  - 사장님 시나리오 추가: 내 정보 isOwner·storeId / 손님 사장님 API 403 / 오늘 현황 / 대기시간 25분 → 손님 가게 상세 반영 → 범위 초과 거부 → 원복 / 잠시 쉼 → 손님 주문 거부 → 잘못된 상태 거부 → 영업 재개 / 단계 건너뛰기 거부 / 사유 없는 거절 거부 / 다른 가게 사장님 처리 거부 / 새 주문 목록 / 거절 / 거절한 주문 재처리 거부 / 메뉴 목록 / 품절 → 손님 주문 거부 → 해제 / 남의 가게 메뉴 품절 거부
