@@ -50,7 +50,7 @@ public class AddressSvcImpl implements AddressSvc {
         AddressDto address = addressDao.getAddress(addressId, userId);
 
         if (address == null) {
-            throw new BizException("주소를 찾을 수 없습니다.");
+            throw new BizException("address_not_found");
         }
 
         return address;
@@ -64,7 +64,7 @@ public class AddressSvcImpl implements AddressSvc {
         // 1. 주소 개수 제한 확인
         int currentCount = addressDao.getAddressCount(userId);
         if (currentCount >= MAX_ADDRESS_COUNT) {
-            throw new BizException("최대 " + MAX_ADDRESS_COUNT + "개까지만 등록할 수 있습니다.");
+            throw new BizException("address_limit_exceeded", String.valueOf(MAX_ADDRESS_COUNT));
         }
 
         // 2. 기본 주소 설정 처리
@@ -82,7 +82,7 @@ public class AddressSvcImpl implements AddressSvc {
         // 4. 주소 등록
         int result = addressDao.regAddress(request);
         if (result == 0) {
-            throw new BizException("주소 등록에 실패했습니다.");
+            throw new BizException("fail_add");
         }
 
         log.info("주소 등록 완료: idx={}", request.getIdx());
@@ -97,7 +97,7 @@ public class AddressSvcImpl implements AddressSvc {
         // 1. 기존 주소 존재 확인
         AddressDto existingAddress = addressDao.getAddress(addressId, userId);
         if (existingAddress == null) {
-            throw new BizException("수정할 주소를 찾을 수 없습니다.");
+            throw new BizException("address_not_found");
         }
 
         // 2. 수정할 데이터 설정
@@ -107,7 +107,7 @@ public class AddressSvcImpl implements AddressSvc {
         // 3. 주소 수정
         int result = addressDao.modAddress(request);
         if (result == 0) {
-            throw new BizException("주소 수정에 실패했습니다.");
+            throw new BizException("fail_update");
         }
 
         log.info("주소 수정 완료: idx={}", addressId);
@@ -122,7 +122,7 @@ public class AddressSvcImpl implements AddressSvc {
         // 1. 기존 주소 존재 확인
         AddressDto existingAddress = addressDao.getAddress(addressId, userId);
         if (existingAddress == null) {
-            throw new BizException("삭제할 주소를 찾을 수 없습니다.");
+            throw new BizException("address_not_found");
         }
 
         // 2. 기본 주소 삭제 시 다른 주소를 기본으로 설정
@@ -131,7 +131,7 @@ public class AddressSvcImpl implements AddressSvc {
         // 3. 주소 삭제
         int result = addressDao.delAddress(addressId, userId);
         if (result == 0) {
-            throw new BizException("주소 삭제에 실패했습니다.");
+            throw new BizException("fail_remove");
         }
 
         // 4. 삭제된 주소가 기본 주소였다면 다른 주소를 기본으로 설정
@@ -156,7 +156,7 @@ public class AddressSvcImpl implements AddressSvc {
         // 1. 주소 존재 확인
         AddressDto address = addressDao.getAddress(addressId, userId);
         if (address == null) {
-            throw new BizException("주소를 찾을 수 없습니다.");
+            throw new BizException("address_not_found");
         }
 
         // 2. 이미 기본 주소인 경우
@@ -171,7 +171,7 @@ public class AddressSvcImpl implements AddressSvc {
         // 4. 새로운 기본 주소 설정
         int result = addressDao.modAddressDefaultY(addressId, userId);
         if (result == 0) {
-            throw new BizException("기본 주소 설정에 실패했습니다.");
+            throw new BizException("fail_update");
         }
 
         log.info("기본 주소 설정 완료: idx={}", addressId);

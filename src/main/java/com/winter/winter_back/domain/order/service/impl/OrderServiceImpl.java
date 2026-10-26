@@ -160,156 +160,123 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderConfirmResponse confirmOrder(OrderConfirmRequest confirmRequest, String userId) {
-        try {
-            // 주문 존재 여부 확인
-            OrderDto order = orderDao.selectOrderById(confirmRequest.getOrderId());
-            if (order == null) {
-                throw new BizException("존재하지 않는 주문입니다.");
-            }
-
-            if (!order.getUserId().equals(userId)) {
-                throw new BizException("주문에 대한 권한이 없습니다.");
-            }
-
-            // 주문 상태 업데이트
-            orderDao.updateOrderStatus(confirmRequest.getOrderId(), OrderStatus.CONFIRMED.name());
-
-            // 주문 히스토리 생성
-            createOrderHistory(confirmRequest.getOrderId(), "ORDER_CONFIRMED",
-                    "주문이 확인되었습니다. 예상 시간: " + confirmRequest.getEstimatedTime(), userId);
-
-            return OrderConfirmResponse.builder()
-                    .orderId(confirmRequest.getOrderId())
-                    .status(OrderStatus.CONFIRMED.name())
-                    .estimatedTime(confirmRequest.getEstimatedTime())
-                    .message("주문이 확인되었습니다.")
-                    .build();
-
-        } catch (BizException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("주문 확인 중 오류 발생: {}", e.getMessage(), e);
-            throw new BizException("주문 확인 처리 중 오류가 발생했습니다.");
+        // 주문 존재 여부 확인
+        OrderDto order = orderDao.selectOrderById(confirmRequest.getOrderId());
+        if (order == null) {
+            throw new BizException("order_not_found");
         }
+
+        if (!order.getUserId().equals(userId)) {
+            throw new BizException("permission_denied");
+        }
+
+        // 주문 상태 업데이트
+        orderDao.updateOrderStatus(confirmRequest.getOrderId(), OrderStatus.CONFIRMED.name());
+
+        // 주문 히스토리 생성
+        createOrderHistory(confirmRequest.getOrderId(), "ORDER_CONFIRMED",
+                "주문이 확인되었습니다. 예상 시간: " + confirmRequest.getEstimatedTime(), userId);
+
+        return OrderConfirmResponse.builder()
+                .orderId(confirmRequest.getOrderId())
+                .status(OrderStatus.CONFIRMED.name())
+                .estimatedTime(confirmRequest.getEstimatedTime())
+                .message("주문이 확인되었습니다.")
+                .build();
+
     }
 
 
     @Override
     @Transactional(readOnly = true)
     public ListResponseDto<OrderListResponse> getOrderList(String userId, int page, int limit, String status) {
-        try {
-            int offset = (page - 1) * limit;
+        int offset = (page - 1) * limit;
 
-            List<OrderListResponse> orders = orderDao.selectOrderList(userId, status, offset, limit);
-            int totalCount = orderDao.selectOrderCount(userId, status);
+        List<OrderListResponse> orders = orderDao.selectOrderList(userId, status, offset, limit);
+        int totalCount = orderDao.selectOrderCount(userId, status);
 
-            ListResponseDto<OrderListResponse> response = new ListResponseDto<>();
-            response.setTotalCount(totalCount);
-            response.setDataList(orders);
+        ListResponseDto<OrderListResponse> response = new ListResponseDto<>();
+        response.setTotalCount(totalCount);
+        response.setDataList(orders);
 
-            return response;
+        return response;
 
-        } catch (Exception e) {
-            log.error("주문 목록 조회 중 오류 발생: {}", e.getMessage(), e);
-            throw new BizException("주문 목록 조회 중 오류가 발생했습니다.");
-        }
     }
 
     @Override
     @Transactional(readOnly = true)
     public OrderDetailResponse getOrderDetail(String orderId, String userId) {
-        try {
-            OrderDetailResponse orderDetail = orderDao.selectOrderDetail(orderId);
-            if (orderDetail == null) {
-                throw new BizException("존재하지 않는 주문입니다.");
-            }
-
-            if (!orderDetail.getUserId().equals(userId)) {
-                throw new BizException("주문에 대한 권한이 없습니다.");
-            }
-
-            // 주문 항목 조회
-            List<OrderDetailResponse.OrderItem> items = orderItemDao.selectOrderItems(orderId);
-            orderDetail.setItems(items);
-
-            return orderDetail;
-
-        } catch (BizException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("주문 상세 조회 중 오류 발생: {}", e.getMessage(), e);
-            throw new BizException("주문 상세 조회 중 오류가 발생했습니다.");
+        OrderDetailResponse orderDetail = orderDao.selectOrderDetail(orderId);
+        if (orderDetail == null) {
+            throw new BizException("order_not_found");
         }
+
+        if (!orderDetail.getUserId().equals(userId)) {
+            throw new BizException("permission_denied");
+        }
+
+        // 주문 항목 조회
+        List<OrderDetailResponse.OrderItem> items = orderItemDao.selectOrderItems(orderId);
+        orderDetail.setItems(items);
+
+        return orderDetail;
+
     }
 
     @Override
     @Transactional(readOnly = true)
     public OrderTrackingResponse getOrderTracking(String orderId, String userId) {
-        try {
-            OrderDto order = orderDao.selectOrderById(orderId);
-            if (order == null) {
-                throw new BizException("존재하지 않는 주문입니다.");
-            }
-
-            if (!order.getUserId().equals(userId)) {
-                throw new BizException("주문에 대한 권한이 없습니다.");
-            }
-
-            // 주문 히스토리 조회
-            List<OrderHistoryDto> histories = orderHistoryDao.selectOrderHistories(orderId);
-
-            return OrderTrackingResponse.builder()
-                    .orderId(orderId)
-                    .currentStatus(order.getStatus())
-                    .histories(histories)
-                    .estimatedTime(getEstimatedTimeByStatus(order.getStatus()))
-                    .build();
-
-        } catch (BizException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("주문 추적 조회 중 오류 발생: {}", e.getMessage(), e);
-            throw new BizException("주문 추적 조회 중 오류가 발생했습니다.");
+        OrderDto order = orderDao.selectOrderById(orderId);
+        if (order == null) {
+            throw new BizException("order_not_found");
         }
+
+        if (!order.getUserId().equals(userId)) {
+            throw new BizException("permission_denied");
+        }
+
+        // 주문 히스토리 조회
+        List<OrderHistoryDto> histories = orderHistoryDao.selectOrderHistories(orderId);
+
+        return OrderTrackingResponse.builder()
+                .orderId(orderId)
+                .currentStatus(order.getStatus())
+                .histories(histories)
+                .estimatedTime(getEstimatedTimeByStatus(order.getStatus()))
+                .build();
+
     }
 
     @Override
     public OrderResponse cancelOrder(String orderId, OrderCancelRequest cancelRequest, String userId) {
-        try {
-            OrderDto order = orderDao.selectOrderById(orderId);
-            if (order == null) {
-                throw new BizException("존재하지 않는 주문입니다.");
-            }
-
-            if (!order.getUserId().equals(userId)) {
-                throw new BizException("주문에 대한 권한이 없습니다.");
-            }
-
-            // 취소 가능한 상태인지 확인
-            OrderStatus currentStatus = OrderStatus.from(order.getStatus());
-            if (currentStatus == null || !currentStatus.canCancel()) {
-                throw new BizException("취소할 수 없는 주문 상태입니다.");
-            }
-
-            // 주문 상태 업데이트
-            orderDao.updateOrderStatus(orderId, OrderStatus.CANCELLED.name());
-
-            // 주문 히스토리 생성
-            createOrderHistory(orderId, "ORDER_CANCELLED",
-                    "주문이 취소되었습니다. 사유: " + cancelRequest.getReason(), userId);
-
-            return OrderResponse.builder()
-                    .orderId(orderId)
-                    .status(OrderStatus.CANCELLED.name())
-                    .message("주문이 취소되었습니다.")
-                    .build();
-
-        } catch (BizException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("주문 취소 중 오류 발생: {}", e.getMessage(), e);
-            throw new BizException("주문 취소 처리 중 오류가 발생했습니다.");
+        OrderDto order = orderDao.selectOrderById(orderId);
+        if (order == null) {
+            throw new BizException("order_not_found");
         }
+
+        if (!order.getUserId().equals(userId)) {
+            throw new BizException("permission_denied");
+        }
+
+        // 취소 가능한 상태인지 확인
+        OrderStatus currentStatus = OrderStatus.from(order.getStatus());
+        if (currentStatus == null || !currentStatus.canCancel()) {
+            throw new BizException("order_cannot_cancel");
+        }
+
+        // 주문 상태 업데이트
+        orderDao.updateOrderStatus(orderId, OrderStatus.CANCELLED.name());
+
+        // 주문 히스토리 생성
+        createOrderHistory(orderId, "ORDER_CANCELLED",
+                "주문이 취소되었습니다. 사유: " + cancelRequest.getReason(), userId);
+
+        return OrderResponse.builder()
+                .orderId(orderId)
+                .status(OrderStatus.CANCELLED.name())
+                .message("주문이 취소되었습니다.")
+                .build();
+
     }
 
     private String generateOrderId() {

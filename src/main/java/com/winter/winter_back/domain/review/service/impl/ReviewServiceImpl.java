@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -88,7 +87,7 @@ public class ReviewServiceImpl implements ReviewService {
     public ReviewResponse getReview(Long reviewId) {
         ReviewDto review = reviewDao.selectReviewById(reviewId);
         if (review == null) {
-            throw new BizException("리뷰를 찾을 수 없습니다.", new ArrayList<>());
+            throw new BizException("review_not_found");
         }
         return convertToResponse(review);
     }
@@ -128,7 +127,7 @@ public class ReviewServiceImpl implements ReviewService {
         log.info("[createReview] > [reviewDto] === {}", reviewDto);
 
         if (result == 0) {
-            throw new BizException("리뷰 작성에 실패했습니다.", new ArrayList<>());
+            throw new BizException("fail_add");
         }
 
         log.info("리뷰 작성 완료 - userId: {}, storeId: {}, reviewId: {}", userId, request.getStoreId(), reviewDto.getIdx());
@@ -141,11 +140,11 @@ public class ReviewServiceImpl implements ReviewService {
     public void updateReview(String userId, Long reviewId, ReviewUpdateRequest request) {
         ReviewDto existingReview = reviewDao.selectReviewById(reviewId);
         if (existingReview == null) {
-            throw new BizException("리뷰를 찾을 수 없습니다.", new ArrayList<>());
+            throw new BizException("review_not_found");
         }
 
         if (!existingReview.getUserId().equals(userId)) {
-            throw new BizException("본인의 리뷰만 수정할 수 있습니다.", new ArrayList<>());
+            throw new BizException("permission_denied");
         }
 
         ReviewDto reviewDto = new ReviewDto();
@@ -157,7 +156,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         int result = reviewDao.updateReview(reviewDto);
         if (result == 0) {
-            throw new BizException("리뷰 수정에 실패했습니다.", new ArrayList<>());
+            throw new BizException("fail_update");
         }
 
         log.info("리뷰 수정 완료 - userId: {}, reviewId: {}", userId, reviewId);
@@ -168,16 +167,16 @@ public class ReviewServiceImpl implements ReviewService {
     public void deleteReview(String userId, Long reviewId) {
         ReviewDto existingReview = reviewDao.selectReviewById(reviewId);
         if (existingReview == null) {
-            throw new BizException("리뷰를 찾을 수 없습니다.", new ArrayList<>());
+            throw new BizException("review_not_found");
         }
 
         if (!existingReview.getUserId().equals(userId)) {
-            throw new BizException("본인의 리뷰만 삭제할 수 있습니다.", new ArrayList<>());
+            throw new BizException("permission_denied");
         }
 
         int result = reviewDao.deleteReview(reviewId);
         if (result == 0) {
-            throw new BizException("리뷰 삭제에 실패했습니다.", new ArrayList<>());
+            throw new BizException("fail_remove");
         }
 
         log.info("리뷰 삭제 완료 - userId: {}, reviewId: {}", userId, reviewId);

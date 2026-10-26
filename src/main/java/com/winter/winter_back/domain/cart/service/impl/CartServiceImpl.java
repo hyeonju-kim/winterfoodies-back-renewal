@@ -1,7 +1,6 @@
 package com.winter.winter_back.domain.cart.service.impl;
 
-import com.winter.winter_back.common.exception.BusinessException;
-import com.winter.winter_back.common.exception.ErrorCode;
+import com.winter.winter_back.common.exception.BizException;
 import com.winter.winter_back.domain.cart.dao.CartDao;
 import com.winter.winter_back.domain.cart.dao.CartItemDao;
 import com.winter.winter_back.domain.cart.dto.*;
@@ -82,14 +81,14 @@ public class CartServiceImpl implements CartService {
         System.out.println("🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀🍀");
 
         if (menu == null) {
-            throw new BusinessException(ErrorCode.MENU_NOT_FOUND);
+            throw new BizException("menu_not_found");
         }
 
         // 매장 정보 조회
         StoreDto store = storeDao.findById(request.getStoreId());
         log.info("[addToCart] > [store] === {}", store);
         if (store == null) {
-            throw new BusinessException(ErrorCode.STORE_NOT_FOUND);
+            throw new BizException("restaurant_not_found");
         }
 
         // 기존 장바구니 조회
@@ -165,12 +164,12 @@ public class CartServiceImpl implements CartService {
         // 장바구니 아이템 조회 및 권한 확인
         CartItemDto cartItem = cartItemDao.findById(itemId);
         if (cartItem == null) {
-            throw new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND);
+            throw new BizException("cart_item_not_found");
         }
 
         CartDto cart = cartDao.findById(cartItem.getCartId());
         if (cart == null || !cart.getUserId().equals(userId)) {
-            throw new BusinessException(ErrorCode.CART_ACCESS_DENIED);
+            throw new BizException("permission_denied");
         }
 
         // 수량 및 총 가격 업데이트
@@ -193,12 +192,12 @@ public class CartServiceImpl implements CartService {
         // 장바구니 아이템 조회 및 권한 확인
         CartItemDto cartItem = cartItemDao.findById(itemId);
         if (cartItem == null) {
-            throw new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND);
+            throw new BizException("cart_item_not_found");
         }
 
         CartDto cart = cartDao.findById(cartItem.getCartId());
         if (cart == null || !cart.getUserId().equals(userId)) {
-            throw new BusinessException(ErrorCode.CART_ACCESS_DENIED);
+            throw new BizException("permission_denied");
         }
 
         // 아이템 옵션 및 아이템 삭제

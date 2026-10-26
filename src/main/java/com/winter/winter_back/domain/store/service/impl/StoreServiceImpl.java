@@ -69,7 +69,7 @@ public class StoreServiceImpl implements StoreService {
         StoreDto store = storeDao.findById(storeId);
 
         if (store == null) {
-            throw new BizException("매장을 찾을 수 없습니다.");
+            throw new BizException("restaurant_not_found");
         }
 
         // 거리 계산
@@ -95,7 +95,7 @@ public class StoreServiceImpl implements StoreService {
         // 매장 존재 확인
         StoreDto store = storeDao.findById(storeId);
         if (store == null) {
-            throw new BizException("매장을 찾을 수 없습니다.");
+            throw new BizException("restaurant_not_found");
         }
 
         // 메뉴 카테고리 조회
