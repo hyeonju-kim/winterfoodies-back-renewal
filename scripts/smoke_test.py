@@ -20,6 +20,7 @@ import json
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 SUCCESS = '20000000'
@@ -263,6 +264,18 @@ class SmokeTest:
                   else '공개 목록에 userId 노출')
         self.call('내 리뷰', 'GET', '/reviews/my', token=access_token)
         self.call('리뷰 통계', 'GET', '/reviews/store/1/stats')
+
+        # 검색: 가게 이름·간식 종류 이름·메뉴 이름으로 찾고, % 는 와일드카드로 쓰이지 않는다
+        self.call('검색: 가게 이름(호떡)', 'GET', '/stores/search?keyword=%s' % urllib.parse.quote('호떡'),
+                  check=lambda data: None if 2 in [st.get('id') for st in data.get('stores', [])] else '호떡 코너 없음')
+        self.call('검색: 메뉴 이름(슈크림)', 'GET', '/stores/search?keyword=%s' % urllib.parse.quote('슈크림'),
+                  check=lambda data: None if 1 in [st.get('id') for st in data.get('stores', [])] else '붕어빵 하우스 없음')
+        self.call('검색: 간식 종류(붕어빵)', 'GET', '/stores/search?keyword=%s' % urllib.parse.quote('붕어빵'),
+                  check=lambda data: None if 1 in [st.get('id') for st in data.get('stores', [])] else '붕어빵 하우스 없음')
+        self.call('검색: % 는 와일드카드 아님', 'GET', '/stores/search?keyword=%25',
+                  check=lambda data: None if data.get('totalCount') == 0 else 'totalCount=%s' % data.get('totalCount'))
+        self.call('검색: 없는 검색어', 'GET', '/stores/search?keyword=%s' % urllib.parse.quote('피자'),
+                  check=lambda data: None if data.get('totalCount') == 0 else 'totalCount=%s' % data.get('totalCount'))
 
         # 공지사항 (비로그인 조회)
         self.call('공지 목록(고정 먼저·비공개 제외)', 'GET', '/notices',
