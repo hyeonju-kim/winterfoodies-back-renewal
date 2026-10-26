@@ -11,9 +11,11 @@ INSERT IGNORE INTO tb_store (id, name, description, address, phone, latitude, lo
     (1, '붕어빵 하우스', '테스트 매장', '서울 강남구 1', '0212345678', 37.4980000, 127.0276000, 'OPEN', 'BUNGEOPPANG', 5000, 1000, 20),
     (2, '호떡 코너',     '테스트 매장', '서울 서초구 2', '0287654321', 37.4910000, 127.0070000, 'OPEN', 'HOTTEOK',     3000,    0, 15);
 
-INSERT IGNORE INTO tb_store_image (id, store_id, image_url) VALUES
-    (1, 1, 'https://example.com/store1.png'),
-    (2, 2, 'https://example.com/store2.png');
+-- 1번 매장은 이미지 2장 (대표 이미지 = sort_order 가 가장 작은 store1.png)
+INSERT IGNORE INTO tb_store_image (id, store_id, image_url, sort_order) VALUES
+    (1, 1, 'https://example.com/store1.png',        1),
+    (2, 2, 'https://example.com/store2.png',        1),
+    (3, 1, 'https://example.com/store1_second.png', 2);
 
 INSERT IGNORE INTO tb_store_stats (store_id, average_rating, total_reviews, total_orders) VALUES
     (1, 4.50, 10, 100),
