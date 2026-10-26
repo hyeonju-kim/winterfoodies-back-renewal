@@ -19,7 +19,7 @@ public class ReviewResponse {
     private Long idx;                       // 리뷰 ID
     private Long storeId;                   // 매장 ID
     private String userId;                    // 사용자 ID
-    private Long orderOrderId;              // 주문 ID
+    private String orderOrderId;              // 주문 ID
     private Long rating;                    // 평점
     private String content;                 // 리뷰 내용
     private String images;                  // 리뷰 이미지

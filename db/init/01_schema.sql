@@ -312,7 +312,7 @@ CREATE TABLE IF NOT EXISTS tb_review (
     idx                BIGINT        NOT NULL AUTO_INCREMENT COMMENT '리뷰 PK',
     store_id           BIGINT        NOT NULL COMMENT '매장 ID (→ tb_store.id)',
     user_id            VARCHAR(50)   NOT NULL COMMENT '작성자 아이디 (→ tb_user.id)', -- 추정: 매퍼의 CAST(... AS CHAR) 는 과거 숫자형 흔적
-    order_order_id     BIGINT        NULL     COMMENT '주문 참조 ID - DTO 가 Long (tb_order.order_id 는 문자열, tb_order.idx 와 대응하는지 확인 필요)', -- 추정
+    order_order_id     VARCHAR(50)   NULL     COMMENT '리뷰한 주문 번호 (→ tb_order.order_id)',
     rating             INT           NOT NULL COMMENT '평점(1~5)',
     images             VARCHAR(2000) NULL     COMMENT '리뷰 이미지(문자열, 구분자/JSON 형식 미상)', -- 추정
     content            TEXT          NULL     COMMENT '리뷰 내용',

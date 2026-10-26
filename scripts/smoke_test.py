@@ -27,6 +27,8 @@ UNAUTHORIZED = '40001001'
 TOKEN_WRONG = '40001007'
 TOKEN_BLACKLISTED = '40001008'
 TOKEN_REFRESH_EXPIRE = '40001009'
+NOT_SUPPORTED_CODE = '30003003'
+REVIEW_ALREADY_EXISTS = '64001002'
 
 
 class SmokeTest:
@@ -34,8 +36,8 @@ class SmokeTest:
         self.base_url = base_url.rstrip('/')
         self.results = []
 
-    def call(self, label, method, path, body=None, token=None, expected_code=SUCCESS):
-        """API 를 호출하고 응답 code 를 기대값과 비교해 기록한다"""
+    def call(self, label, method, path, body=None, token=None, expected_code=SUCCESS, check=None):
+        """API 를 호출하고 응답 code 를 기대값과 비교해 기록한다. check 가 있으면 응답 data 도 검사한다"""
         data = json.dumps(body).encode('utf-8') if body is not None else None
         request = urllib.request.Request(self.base_url + path, data=data, method=method)
         request.add_header('Content-Type', 'application/json')
@@ -59,9 +61,15 @@ class SmokeTest:
             code = None
             description = 'JSON 아님: ' + text[:80]
 
+        data = payload.get('data') or {}
         is_passed = code == expected_code
+        if is_passed and check is not None:
+            message = check(data)
+            if message:
+                is_passed = False
+                description = '응답 검사 실패: ' + message
         self.results.append((label, is_passed, code, description))
-        return payload.get('data') or {}
+        return data
 
     def run(self, user_id):
         password = 'Test1234!'
@@ -78,12 +86,17 @@ class SmokeTest:
 
         # 가게·메뉴 조회 (비로그인)
         self.call('카테고리', 'GET', '/categories')
-        self.call('가게 목록', 'GET', '/stores?lat=37.5&lng=127.0&page=0&size=10')
+        self.call('가게 목록', 'GET', '/stores?lat=37.5&lng=127.0&page=0&size=10', check=check_store_list)
+        first_page = self.call('가게 목록 1페이지(1건)', 'GET', '/stores?lat=37.5&lng=127.0&page=0&size=1',
+                               check=lambda data: None if len(data.get('stores', [])) == 1 else '1건이 아님')
+        self.call('가게 목록 2페이지(다른 매장)', 'GET', '/stores?lat=37.5&lng=127.0&page=1&size=1',
+                  check=lambda data: check_next_page(first_page, data))
         self.call('가게 검색', 'GET', '/stores/search?keyword=%EB%B6%95&lat=37.5&lng=127.0')
-        self.call('가게 상세', 'GET', '/stores/1?lat=37.5&lng=127.0')
+        self.call('가게 상세(대표 이미지)', 'GET', '/stores/1?lat=37.5&lng=127.0', check=check_store_detail_image)
         self.call('가게 메뉴', 'GET', '/stores/1/menu')
         self.call('가게 랭킹(type 미지정)', 'GET', '/stores/rankings')
         self.call('가게 랭킹(popular)', 'GET', '/stores/rankings?type=popular')
+        self.call('가게 랭킹(없는 종류)', 'GET', '/stores/rankings?type=unknown', expected_code=NOT_SUPPORTED_CODE)
         self.call('메뉴 상세', 'GET', '/menu/1')
         self.call('홈 피드', 'GET', '/home/feed?lat=37.5&lng=127.0', token=access_token)
 
@@ -91,6 +104,10 @@ class SmokeTest:
         self.call('찜 추가', 'POST', '/favorites', {'storeId': 1}, token=access_token)
         self.call('찜 목록', 'GET', '/favorites', token=access_token)
         self.call('찜 확인', 'GET', '/favorites/check/1', token=access_token)
+        self.call('찜 해제 후', 'DELETE', '/favorites/1', token=access_token)
+        self.call('찜 다시 추가', 'POST', '/favorites', {'storeId': 1}, token=access_token)
+        self.call('찜 다시 추가 후 목록(1건)', 'GET', '/favorites', token=access_token,
+                  check=lambda data: None if data.get('totalCount') == 1 else 'totalCount=%s' % data.get('totalCount'))
 
         # 배송지
         self.call('배송지 등록', 'POST', '/addresses',
@@ -114,8 +131,14 @@ class SmokeTest:
             self.call('주문 추적', 'GET', '/orders/%s/tracking' % order_id, token=access_token)
 
         # 리뷰
-        self.call('리뷰 작성', 'POST', '/reviews',
-                  {'storeId': 1, 'orderOrderId': 1, 'rating': 5, 'content': 'good'}, token=access_token)
+        if order_id:
+            self.call('리뷰 작성 가능 여부', 'GET', '/reviews/order/%s/writable' % order_id, token=access_token,
+                      check=lambda data: None if data is True else '작성 가능해야 함')
+            self.call('리뷰 작성', 'POST', '/reviews',
+                      {'storeId': 1, 'orderOrderId': order_id, 'rating': 5, 'content': 'good'}, token=access_token)
+            self.call('같은 주문 리뷰 중복 거부', 'POST', '/reviews',
+                      {'storeId': 1, 'orderOrderId': order_id, 'rating': 4, 'content': 'again'}, token=access_token,
+                      expected_code=REVIEW_ALREADY_EXISTS)
         self.call('가게 리뷰 목록', 'GET', '/reviews/store/1')
         self.call('내 리뷰', 'GET', '/reviews/my', token=access_token)
         self.call('리뷰 통계', 'GET', '/reviews/store/1/stats')
@@ -146,6 +169,36 @@ class SmokeTest:
         passed_count = sum(1 for result in self.results if result[1])
         print('\n결과: %d / %d 통과' % (passed_count, len(self.results)))
         return passed_count == len(self.results)
+
+
+def check_store_list(data):
+    """매장 목록: 같은 매장이 중복되지 않고, 이미지가 있는 매장은 imageUrl 이 채워져야 한다"""
+    stores = data.get('stores', [])
+    store_ids = [store.get('id') for store in stores]
+    if len(store_ids) != len(set(store_ids)):
+        return '매장 중복: %s' % store_ids
+    if any(not store.get('imageUrl') for store in stores):
+        return 'imageUrl 누락'
+    return None
+
+
+def check_next_page(first_page, data):
+    stores = data.get('stores', [])
+    first_ids = [store.get('id') for store in first_page.get('stores', [])]
+    if len(stores) != 1:
+        return '1건이 아님'
+    if stores[0].get('id') in first_ids:
+        return '1페이지와 같은 매장'
+    return None
+
+
+def check_store_detail_image(data):
+    image_url = (data.get('store') or data).get('imageUrl')
+    if not image_url:
+        return 'imageUrl 누락'
+    if 'second' in image_url:
+        return '대표 이미지가 아님: %s' % image_url
+    return None
 
 
 def main():

@@ -1,6 +1,8 @@
 package com.winter.winter_back.domain.review.service.impl;
 
 import com.winter.winter_back.common.exception.BizException;
+import com.winter.winter_back.domain.order.dao.OrderDao;
+import com.winter.winter_back.domain.order.dto.OrderDto;
 import com.winter.winter_back.domain.review.dao.ReviewDao;
 import com.winter.winter_back.domain.review.dto.*;
 import com.winter.winter_back.domain.review.service.ReviewService;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewDao reviewDao;
+    private final OrderDao orderDao;
 
     @Override
     public ReviewListResponse getStoreReviews(Long storeId, int page, int limit) {
@@ -95,12 +98,18 @@ public class ReviewServiceImpl implements ReviewService {
     public void createReview(String userId, ReviewRequest request) {
         log.info("[createReview] > [userId] === {}", userId);
         log.info("[createReview] > [request] === {}", request);
-        // 이미 해당 주문에 대한 리뷰가 있는지 확인
-        boolean bool = reviewDao.existsReviewByOrderId(userId, request.getOrderOrderId());
-        log.info("[createReview] > [bool] === {}", bool);
+        // 본인 주문이고, 리뷰하려는 매장의 주문인지 확인
+        OrderDto order = orderDao.selectOrderById(request.getOrderOrderId());
+        if (order == null) {
+            throw new BizException("order_not_found");
+        }
+        if (!userId.equals(order.getUserId()) || !request.getStoreId().equals(order.getStoreId())) {
+            throw new BizException("review_not_allowed");
+        }
 
-        if (reviewDao.existsReviewByOrderId(userId, request.getOrderOrderId())) { // 여기서 에러나는 듯
-            throw new BizException("이미 해당 주문에 대한 리뷰를 작성하셨습니다.", new ArrayList<>());
+        // 이미 해당 주문에 대한 리뷰가 있는지 확인
+        if (reviewDao.existsReviewByOrderId(userId, request.getOrderOrderId())) {
+            throw new BizException("review_already_exists");
         }
 
 
@@ -180,7 +189,7 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    public boolean isReviewWritable(String userId, Long orderOrderId) {
+    public boolean isReviewWritable(String userId, String orderOrderId) {
         return !reviewDao.existsReviewByOrderId(userId, orderOrderId);
     }
 

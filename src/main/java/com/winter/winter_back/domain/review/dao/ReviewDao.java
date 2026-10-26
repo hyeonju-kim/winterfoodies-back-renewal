@@ -101,7 +101,7 @@ public interface ReviewDao {
      * @param orderOrderId 주문 ID
      * @return 존재 여부
      */
-    boolean existsReviewByOrderId(@Param("userId") String userId, @Param("orderOrderId") Long orderOrderId);
+    boolean existsReviewByOrderId(@Param("userId") String userId, @Param("orderOrderId") String orderOrderId);
 
     /**
      * 매장의 모든 리뷰 삭제 (매장 삭제 시 사용)
