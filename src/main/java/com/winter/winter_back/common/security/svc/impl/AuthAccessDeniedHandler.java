@@ -27,7 +27,7 @@ public class AuthAccessDeniedHandler implements AccessDeniedHandler {
 			throws IOException, ServletException {
 
 		log.info("######## 접근 권한 없음 ########");
-		log.info("# user_id={}", SessionAttributeManager.getLoginUserInfo()); // 사용자 정보 출력
+		log.info("# uri={}", request.getRequestURI()); // 접근 거부된 요청 경로
 
 		// 응답 생성
 		ResponseBaseDto comResultDto = exceptionInfoConfig.makeResponse("permission_denied");

@@ -47,10 +47,6 @@
 			<artifactId>mybatis-spring-boot-starter</artifactId>
 			<version>2.3.0</version>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.session</groupId>
-			<artifactId>spring-session-data-redis</artifactId>
-		</dependency>
 
 <!--		<dependency>-->
 <!--			<groupId>com.mysql</groupId>-->
@@ -79,12 +75,6 @@
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-			<version>2.10.1</version>
 		</dependency>
 
 		<dependency>
@@ -130,12 +120,6 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- AWS RDS SSH TUNNELING -->
-        <dependency>
-            <groupId>com.jcraft</groupId>
-            <artifactId>jsch</artifactId>
-            <version>0.1.55</version>
-        </dependency>
 
         <!-- JWT SETTING 250921 -->
         <dependency>

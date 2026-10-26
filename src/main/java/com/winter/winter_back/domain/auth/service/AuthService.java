@@ -4,9 +4,7 @@ import com.winter.winter_back.common.exception.BizException;
 import com.winter.winter_back.common.security.config.TokenProvider;
 import com.winter.winter_back.common.security.dao.SecuritySupportDao;
 import com.winter.winter_back.common.security.dto.ComLoginUserInfoDto;
-import com.winter.winter_back.common.security.dto.ComLoginUserMenuDto;
 import com.winter.winter_back.common.security.dto.ComRoleUserDto;
-import com.winter.winter_back.common.security.dto.RoleMenuScrnMapg;
 import com.winter.winter_back.domain.auth.dto.LoginRequest;
 import com.winter.winter_back.domain.auth.dto.RefreshTokenRequest;
 import com.winter.winter_back.domain.auth.dto.TokenVo;
@@ -53,9 +51,8 @@ public class AuthService {
      * 1. 사용자 존재 여부 확인
      * 2. 비밀번호 검증
      * 3. 사용자 권한 정보 조회
-     * 4. 메뉴 권한 정보 조회
-     * 5. 로그인 이력 저장
-     * 6. JWT 토큰 생성 및 캐시 저장
+     * 4. 로그인 이력 저장
+     * 5. JWT 토큰 생성 및 캐시 저장
      *
      * @param loginRequest 로그인 요청 정보 (username, password)
      * @return TokenVo JWT 토큰 쌍 (accessToken, refreshToken)
@@ -88,15 +85,10 @@ public class AuthService {
         }
         userInfo.setRoleList(roleList);
 
-        // 4. 메뉴 권한 정보 조회 (사용자가 접근 가능한 메뉴 목록)
-        List<RoleMenuScrnMapg> menuList = securitySupportDao.getRoleMenuScrnRoleUse(roleList);
-        log.info("[login] > [menuList] === {}", menuList);
-        userInfo.setMenuScreenInfo(convertToMenuDto(menuList));
-
-        // 5. 로그인 이력 저장 (로그인 시간, 사용자 ID 등)
+        // 4. 로그인 이력 저장 (로그인 시간, 사용자 ID 등)
         securitySupportDao.insertLoginUser(userInfo.getUserId());
 
-        // 6. JWT 토큰 생성 및 반환
+        // 5. JWT 토큰 생성 및 반환
         return tokenManage(userInfo.getUserId(), userInfo);
     }
 
@@ -200,11 +192,7 @@ public class AuthService {
         }
         userInfo.setRoleList(roleList);
 
-        // 10. 메뉴 권한 정보 재조회 (필요한 경우)
-        List<RoleMenuScrnMapg> menuList = securitySupportDao.getRoleMenuScrnRoleUse(roleList);
-        userInfo.setMenuScreenInfo(convertToMenuDto(menuList));
-
-        // 11. 새로운 토큰 쌍 생성
+        // 10. 새로운 토큰 쌍 생성
         TokenVo newToken = tokenManage(userId, userInfo);
         log.info("[refreshToken] > [newToken] === {}", newToken);
 
@@ -247,21 +235,6 @@ public class AuthService {
 
         return tokenVo;
     }
-
-    /**
-     * RoleMenuScrnMapg를 ComLoginUserMenuDto로 변환하는 메서드
-     *
-     * 현재는 임시 구현이며, 실제 프로젝트에서는 메뉴 정보 변환 로직 구현 필요
-     *
-     * @param menuList 데이터베이스에서 조회한 메뉴 권한 정보
-     * @return 변환된 메뉴 정보 리스트
-     */
-    private List<ComLoginUserMenuDto> convertToMenuDto(List<RoleMenuScrnMapg> menuList) {
-        // TODO: 실제 변환 로직 구현 필요
-        // 현재는 빈 리스트 반환 (메뉴 기능 미구현)
-        return new ArrayList<>();
-    }
-
 
     /**
      * 로그아웃 처리 (캐시 및 토큰 무효화)
