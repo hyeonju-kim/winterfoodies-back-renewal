@@ -67,6 +67,28 @@
     </select>
 
 
+    <!-- 검색 조건: 가게 이름·소개, 간식 종류 이름(예: 붕어빵), 판매 중인 메뉴 이름(예: 슈크림) 중 하나라도 포함 -->
+    <sql id="searchCondition">
+        <where>
+            <if test="keywordLike != null">
+                AND (s.name LIKE CONCAT('%', #{keywordLike}, '%') ESCAPE '!'
+                  OR s.description LIKE CONCAT('%', #{keywordLike}, '%') ESCAPE '!'
+                  OR EXISTS (SELECT 1
+                               FROM tb_store_category sc
+                              WHERE sc.store_id = s.id
+                                AND sc.category_name LIKE CONCAT('%', #{keywordLike}, '%') ESCAPE '!')
+                  OR EXISTS (SELECT 1
+                               FROM tb_menus m
+                              WHERE m.store_id = s.id
+                                AND m.is_active = 1
+                                AND m.name LIKE CONCAT('%', #{keywordLike}, '%') ESCAPE '!'))
+            </if>
+            <if test="category != null and category != ''">
+                AND s.category = #{category}
+            </if>
+        </where>
+    </sql>
+
     <select id="searchStoresWithDistance" parameterType="com.winter.winter_back.domain.store.dto.StoreSearchRequest" resultType="com.winter.winter_back.domain.store.dto.StoreDto">
         /*
         SQL ID: com.winter.winter_back.domain.store.dao.searchStoresWithDistance
@@ -88,13 +110,8 @@
         CASE WHEN s.status = 'OPEN' THEN true ELSE false END as isOpen
         FROM tb_store s
         LEFT JOIN tb_store_stats ss ON s.id = ss.store_id
-        <where>
-            <if test="keyword != null and keyword != ''">
-                AND (s.name LIKE CONCAT('%', #{keyword}, '%')
-                OR s.description LIKE CONCAT('%', #{keyword}, '%'))
-            </if>
-        </where>
-        ORDER BY distance ASC
+        <include refid="searchCondition"/>
+        ORDER BY distance ASC, s.id ASC
         LIMIT #{size} OFFSET #{offset}
     </select>
 
@@ -105,12 +122,7 @@
         */
         SELECT COUNT(*)
         FROM tb_store s
-        <where>
-            <if test="keyword != null and keyword != ''">
-                AND (s.name LIKE CONCAT('%', #{keyword}, '%')
-                OR s.description LIKE CONCAT('%', #{keyword}, '%'))
-            </if>
-        </where>
+        <include refid="searchCondition"/>
 
     </select>
 

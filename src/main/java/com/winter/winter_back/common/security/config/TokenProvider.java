@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
  * -----------------------------------------------------------
  * 25. 9. 21.         hj kim             최초 생성
  * 25. 9. 28.        hj kim             토큰 무효화 기능 추가
+ * 26. 10. 26.       hj kim             사용자 전체 토큰 무효화 시각을 초 단위로 저장 (같은 초에 새로 발급한 토큰이 거부되던 문제)
  */
 @Component
 @Slf4j
@@ -161,7 +162,8 @@ public class TokenProvider {
         try {
             // 사용자별 무효화 플래그 설정 (새로운 로그인까지 유효)
             String userInvalidationKey = "user_logout:" + userId;
-            long timestamp = System.currentTimeMillis();
+            // JWT 발급시각(iat)은 초 단위라, 밀리초로 저장하면 같은 초에 새로 로그인한 토큰까지 막힌다 → 초 단위로 내림
+            long timestamp = System.currentTimeMillis() / 1000 * 1000;
 
             // 현재 시간을 저장하여 이 시간 이전에 발급된 토큰들은 모두 무효화
             redisTemplate.opsForValue().set(userInvalidationKey, String.valueOf(timestamp),

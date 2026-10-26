@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
+ * 26. 10. 26.       hj kim             주문 방식(orderType: 포장/배달) 추가
  */
 
 @Data
@@ -36,6 +37,7 @@ public class OrderDto {
     private String orderRequest;
     private String status;
     private String paymentMethod;
+    private String orderType;
     private DeliveryInfoDto deliveryInfo;
     private LocalDateTime createdDatetime;
     private LocalDateTime updatedDatetime;

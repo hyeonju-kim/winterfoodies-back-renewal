@@ -26,6 +26,7 @@ import java.util.List;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
+ * 26. 10. 26.       hj kim             가게 메뉴에서 메뉴 없는 카테고리 제외
  */
 @Service
 @RequiredArgsConstructor
@@ -107,10 +108,15 @@ public class StoreServiceImpl implements StoreService {
             category.setMenus(menus);
         }
 
+        // 사장님이 메뉴를 다 지운 카테고리는 손님 화면에 빈 제목만 남으니 뺀다
+        List<MenuCategoryResponse> visibleCategories = categories.stream()
+                .filter(category -> category.getMenus() != null && !category.getMenus().isEmpty())
+                .toList();
+
         return MenuListResponse.builder()
                 .storeId(storeId)
                 .storeName(store.getName())
-                .categories(categories)
+                .categories(visibleCategories)
                 .build();
     }
 

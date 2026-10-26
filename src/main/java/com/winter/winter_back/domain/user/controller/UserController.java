@@ -1,7 +1,10 @@
 package com.winter.winter_back.domain.user.controller;
 
 import com.winter.winter_back.common.security.dto.ComLoginUserInfoDto;
+import com.winter.winter_back.domain.user.dto.PasswordChangeRequest;
 import com.winter.winter_back.domain.user.dto.UserDto;
+import com.winter.winter_back.domain.user.dto.UserProfileUpdateRequest;
+import com.winter.winter_back.domain.user.dto.WithdrawRequest;
 import com.winter.winter_back.domain.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +22,7 @@ import jakarta.validation.Valid;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
+ * 26. 10. 26.       hj kim             내 정보를 DB 에서 조회(수정 반영), 내 정보 수정·비밀번호 변경·회원탈퇴 추가
  */
 @RestController
 @RequestMapping("/user")
@@ -35,28 +39,41 @@ public class UserController {
         userService.register(userDto);
     }
 
-
     /**
-     * 내 정보 조회 (시큐리티컨텍스트에서 조회) -> 토큰 형식으로 변경함
+     * 내 정보 조회
      */
     @GetMapping("/me")
     public UserDto getCurrentUser(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo) {
-        if (loginUserInfo == null) {
-            throw new RuntimeException("로그인이 필요합니다");
-        }
-
-        log.info("[getCurrentUser] > [userId] === {}", loginUserInfo.getUserId());
-        log.info("[getCurrentUser] > [userNm] === {}", loginUserInfo.getUserNm());
-        log.info("[getCurrentUser] > [tel] === {}", loginUserInfo.getTel());
-
-        // 이미 모든 사용자 정보가 들어있으니 DB 조회 없이 바로 변환
-        UserDto userDto = new UserDto();
-        userDto.setId(loginUserInfo.getUserId());
-        userDto.setName(loginUserInfo.getUserNm());
-        userDto.setTel(loginUserInfo.getTel());
-        return userDto;
+        return userService.getMyProfile(loginUserInfo.getUserId());
     }
 
+    /**
+     * 내 정보 수정 (이름·전화번호)
+     */
+    @PutMapping("/me")
+    public UserDto modMyProfile(
+            @AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+            @RequestBody @Valid UserProfileUpdateRequest request) {
+        return userService.modMyProfile(loginUserInfo.getUserId(), request);
+    }
 
+    /**
+     * 비밀번호 변경
+     */
+    @PutMapping("/me/password")
+    public void modMyPassword(
+            @AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+            @RequestBody @Valid PasswordChangeRequest request) {
+        userService.modMyPassword(loginUserInfo.getUserId(), request);
+    }
 
+    /**
+     * 회원탈퇴
+     */
+    @DeleteMapping("/me")
+    public void delMyAccount(
+            @AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+            @RequestBody @Valid WithdrawRequest request) {
+        userService.delMyAccount(loginUserInfo.getUserId(), request);
+    }
 }

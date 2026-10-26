@@ -20,6 +20,7 @@ import jakarta.validation.Valid;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
+ * 26. 10. 26.       hj kim             주문 확인 API 제거 - 손님이 자기 주문을 확인 처리할 수 있던 문제 (사장님 기능에서 사장님 권한으로 다시 제공)
  */
 
 @Slf4j
@@ -45,23 +46,6 @@ public class OrderController {
         }
 
         return orderService.createOrder(orderRequest, loginUserInfo.getUserId());
-    }
-
-    /**
-     * 주문 확인/완료
-     */
-    @PostMapping("/confirm")
-    public OrderConfirmResponse confirmOrder(
-            @Valid @RequestBody OrderConfirmRequest confirmRequest,
-            @AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo) {
-
-        log.info("주문 확인 요청: {}", confirmRequest);
-
-        if (loginUserInfo == null) {
-            throw new RuntimeException("로그인이 필요합니다");
-        }
-
-        return orderService.confirmOrder(confirmRequest, loginUserInfo.getUserId());
     }
 
     /**

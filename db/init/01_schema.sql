@@ -81,10 +81,12 @@ CREATE TABLE IF NOT EXISTS tb_store (
     delivery_time     INT           NULL     COMMENT '예상 배달시간(분)',
     business_number   VARCHAR(20)   NULL     COMMENT '사업자등록번호',          -- 추정
     is_featured       TINYINT(1)    NOT NULL DEFAULT 0 COMMENT '추천 매장 여부',
+    owner_id          VARCHAR(50)   NULL     COMMENT '사장님 아이디 (→ tb_user.id, ROLE_OWNER)',
     created_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '등록일시',
     updated_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
     PRIMARY KEY (id),
     KEY idx_store_status (status),
+    KEY idx_store_owner (owner_id),
     KEY idx_store_category (category),
     KEY idx_store_created (created_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '매장';
@@ -270,9 +272,10 @@ CREATE TABLE IF NOT EXISTS tb_order (
     order_request            VARCHAR(500)  NULL     COMMENT '가게 요청사항',     -- 추정
     status                   VARCHAR(20)   NOT NULL DEFAULT 'PENDING' COMMENT '주문 상태(PENDING/CONFIRMED/PREPARING/DELIVERING/DELIVERED/CANCELLED)',
     payment_method           VARCHAR(30)   NULL     COMMENT '결제 수단',          -- 추정
+    order_type               VARCHAR(20)   NOT NULL DEFAULT 'PICKUP' COMMENT '주문 방식 (PICKUP 포장 / DELIVERY 배달)',
     delivery_address         VARCHAR(255)  NULL     COMMENT '배달 주소',
     delivery_detail_address  VARCHAR(255)  NULL     COMMENT '배달 상세 주소',
-    delivery_phone           VARCHAR(30)   NULL     COMMENT '배달 연락처',
+    delivery_phone           VARCHAR(30)   NULL     COMMENT '연락처 (포장·배달 공통)',
     delivery_request         VARCHAR(500)  NULL     COMMENT '배달 요청사항',
     created_datetime         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '주문일시',
     updated_datetime         DATETIME      NULL     ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
@@ -323,3 +326,16 @@ CREATE TABLE IF NOT EXISTS tb_review (
     KEY idx_review_user (user_id, created_datetime),
     KEY idx_review_user_order (user_id, order_order_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '매장 리뷰';
+
+CREATE TABLE IF NOT EXISTS tb_notice (
+    idx                BIGINT        NOT NULL AUTO_INCREMENT COMMENT '공지 PK',
+    title              VARCHAR(200)  NOT NULL COMMENT '제목',
+    content            TEXT          NOT NULL COMMENT '내용',
+    is_pinned          CHAR(1)       NOT NULL DEFAULT 'N' COMMENT '상단 고정 여부(Y/N)',
+    is_visible         CHAR(1)       NOT NULL DEFAULT 'Y' COMMENT '공개 여부(Y/N)',
+    created_datetime   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '등록일시',
+    updated_datetime   DATETIME      NULL     ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
+    created_by         VARCHAR(50)   NULL     COMMENT '등록자',
+    PRIMARY KEY (idx),
+    KEY idx_notice_list (is_visible, is_pinned, created_datetime)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '공지사항';

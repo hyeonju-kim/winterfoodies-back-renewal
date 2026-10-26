@@ -102,6 +102,8 @@ public class SecurityConfig {
                         .requestMatchers(nullToEmpty(comSecurityInfoDto.getPermitAllUrlPatterns())).permitAll()
                         .requestMatchers(HttpMethod.GET, nullToEmpty(comSecurityInfoDto.getPermitAllGetUrlPatterns())).permitAll()
                         .requestMatchers(HttpMethod.POST, nullToEmpty(comSecurityInfoDto.getPermitAllPostUrlPatterns())).permitAll()
+                        // 사장님 API 는 사장님 권한만 (어느 가게인지는 서비스에서 로그인 아이디로 한정)
+                        .requestMatchers("/owner/**").hasRole("OWNER")
                         .anyRequest().authenticated())
                 .addFilterBefore(tokenFilter(), UsernamePasswordAuthenticationFilter.class);
 

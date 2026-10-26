@@ -268,6 +268,14 @@ restaurant_duplicate_name:
   code: 61001006
   desc: "동일한 음식점명이 존재합니다."
   status: 409
+owner_store_not_found:
+  code: 61001007
+  desc: "사장님 계정에 연결된 가게가 없습니다."
+  status: 404
+invalid_store_status:
+  code: 61001008
+  desc: "가게 영업 상태 값이 올바르지 않습니다."
+  status: 400
 
 # ===================================
 # 8. 메뉴 관리 오류 (62000000번대)
@@ -354,6 +362,34 @@ order_time_exceeded:
   code: 63001008
   desc: "주문 가능 시간이 초과되었습니다."
   status: 400
+invalid_order_type:
+  code: 63001009
+  desc: "주문 방식이 올바르지 않습니다."
+  status: 400
+delivery_address_required:
+  code: 63001010
+  desc: "배달 주문은 배송 주소가 필요합니다."
+  status: 400
+invalid_contact_phone:
+  code: 63001011
+  desc: "연락처를 휴대폰 번호(숫자만)로 입력해 주세요."
+  status: 400
+invalid_payment_method:
+  code: 63001012
+  desc: "지원하지 않는 결제수단입니다."
+  status: 400
+invalid_order_status_change:
+  code: 63001013
+  desc: "지금 주문 상태에서는 바꿀 수 없는 단계입니다."
+  status: 400
+reject_reason_required:
+  code: 63001014
+  desc: "주문을 거절하려면 사유를 입력해주세요."
+  status: 400
+invalid_sales_period:
+  code: 63001015
+  desc: "매출 기간은 DAY, WEEK, MONTH 중 하나여야 합니다."
+  status: 400
 
 # 9-2. 장바구니 관련 (63002xxx)
 cart_empty:
@@ -398,6 +434,14 @@ review_edit_time_expired:
   code: 64001005
   desc: "리뷰 수정 가능 시간이 초과되었습니다."
   status: 400
+review_order_not_completed:
+  code: 64001006
+  desc: "받아간 주문만 리뷰를 작성할 수 있습니다."
+  status: 400
+notice_not_found:
+  code: 64002001
+  desc: "공지사항을 찾을 수 없습니다."
+  status: 404
 
 # ===================================
 # 11. 배송 관리 오류 (65000000번대)

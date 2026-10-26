@@ -24,8 +24,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +39,7 @@ import java.util.stream.Collectors;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 9. 3.         hj kim             최초 생성
+ * 26. 10. 26.       hj kim             영업 중인 가게만 주문, 포장 연락처 형식·결제수단 검사 / 주문 확인은 사장님 기능용으로 남김
  */
 
 @Slf4j
@@ -44,6 +47,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class OrderServiceImpl implements OrderService {
+
+    // 포장 주문 연락처: 휴대폰 번호 숫자만 (010xxxxxxxx)
+    private static final Pattern CONTACT_PHONE_PATTERN = Pattern.compile("^01[0-9]{8,9}$");
+    // 결제수단: 현장결제 / 카드 (PG 연동 전이라 실제 결제는 가게에서)
+    private static final Set<String> PAYMENT_METHODS = Set.of("ON_SITE", "CARD");
 
     private final OrderDao orderDao;
     private final OrderItemDao orderItemDao;
@@ -62,6 +70,26 @@ public class OrderServiceImpl implements OrderService {
         StoreDto store = storeDao.findById(orderRequest.getStoreId());
         if (store == null) {
             throw new BizException("restaurant_not_found");
+        }
+        // 포장 주문이라 영업 중인 가게만 받는다 (CLOSED·TEMPORARILY_CLOSED 거부)
+        if (!"OPEN".equals(store.getStatus())) {
+            throw new BizException("restaurant_closed");
+        }
+
+        // 포장(기본)이면 배송 주소 없이 받고 배달비 0, 배달이면 배송 주소 필수
+        OrderType orderType = OrderType.from(orderRequest.getOrderType());
+        if (orderType == null) {
+            throw new BizException("invalid_order_type");
+        }
+        if (orderType == OrderType.DELIVERY && orderRequest.getDeliveryAddress() == null) {
+            throw new BizException("delivery_address_required");
+        }
+        if (orderType == OrderType.PICKUP
+                && (orderRequest.getContactPhone() == null || !CONTACT_PHONE_PATTERN.matcher(orderRequest.getContactPhone()).matches())) {
+            throw new BizException("invalid_contact_phone");
+        }
+        if (!PAYMENT_METHODS.contains(orderRequest.getPaymentMethod())) {
+            throw new BizException("invalid_payment_method");
         }
 
         String orderId = generateOrderId();
@@ -86,7 +114,9 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException("minimum_order_amount");
         }
 
-        BigDecimal deliveryFee = BigDecimal.valueOf(store.getDeliveryFee() == null ? 0 : store.getDeliveryFee());
+        BigDecimal deliveryFee = orderType == OrderType.PICKUP || store.getDeliveryFee() == null
+                ? BigDecimal.ZERO
+                : BigDecimal.valueOf(store.getDeliveryFee());
         BigDecimal totalAmount = itemsAmount.add(deliveryFee);
         if (orderRequest.getTotalAmount() != null && orderRequest.getTotalAmount().compareTo(totalAmount) != 0) {
             // 화면에 보인 금액과 서버 계산이 다르면 기록만 남기고, 저장은 서버 계산 금액으로 한다
@@ -101,16 +131,21 @@ public class OrderServiceImpl implements OrderService {
                 .deliveryFee(deliveryFee)
                 .orderRequest(orderRequest.getOrderRequest())
                 .paymentMethod(orderRequest.getPaymentMethod())
+                .orderType(orderType.name())
                 .status(OrderStatus.PENDING.name())
                 .createdBy(userId)
                 .createdDatetime(LocalDateTime.now())
                 .build();
 
-        DeliveryInfoDto deliveryInfo = DeliveryInfoDto.builder()
-                .address(orderRequest.getDeliveryAddress().getAddress())
-                .detailAddress(orderRequest.getDeliveryAddress().getDetailAddress())
-                .phone(orderRequest.getDeliveryAddress().getPhone())
-                .build();
+        // 포장 주문은 연락처만 저장 (delivery_phone 컬럼을 연락처로 같이 쓴다)
+        OrderRequest.DeliveryAddress deliveryAddress = orderRequest.getDeliveryAddress();
+        DeliveryInfoDto deliveryInfo = deliveryAddress == null
+                ? DeliveryInfoDto.builder().phone(orderRequest.getContactPhone()).build()
+                : DeliveryInfoDto.builder()
+                        .address(deliveryAddress.getAddress())
+                        .detailAddress(deliveryAddress.getDetailAddress())
+                        .phone(deliveryAddress.getPhone())
+                        .build();
         orderDto.setDeliveryInfo(deliveryInfo);
 
         orderDao.insertOrder(orderDto);

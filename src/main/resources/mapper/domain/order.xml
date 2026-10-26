@@ -16,6 +16,7 @@
         <result property="orderRequest" column="order_request"/>
         <result property="status" column="status"/>
         <result property="paymentMethod" column="payment_method"/>
+        <result property="orderType" column="order_type"/>
         <result property="createdDatetime" column="created_datetime"/>
         <result property="updatedDatetime" column="updated_datetime"/>
         <result property="createdBy" column="created_by"/>
@@ -30,6 +31,7 @@
 
     <resultMap id="OrderListResponseMap" type="com.winter.winter_back.domain.order.dto.OrderListResponse">
         <result property="orderId" column="order_id"/>
+        <result property="orderType" column="order_type"/>
         <result property="storeName" column="store_name"/>
         <result property="storeImage" column="store_image"/>
         <result property="status" column="status"/>
@@ -52,6 +54,7 @@
         <result property="totalAmount" column="total_amount"/>
         <result property="deliveryFee" column="delivery_fee"/>
         <result property="paymentMethod" column="payment_method"/>
+        <result property="orderType" column="order_type"/>
         <result property="orderRequest" column="order_request"/>
         <result property="orderedAt" column="created_datetime"/>
         <result property="estimatedTime" column="estimated_time"/>
@@ -73,6 +76,7 @@
                               order_request,
                               status,
                               payment_method,
+                              order_type,
                               delivery_address,
                               delivery_detail_address,
                               delivery_phone,
@@ -87,6 +91,7 @@
                 #{orderRequest},
                 #{status},
                 #{paymentMethod},
+                #{orderType},
                 #{deliveryInfo.address},
                 #{deliveryInfo.detailAddress},
                 #{deliveryInfo.phone},
@@ -109,6 +114,7 @@
                order_request,
                status,
                payment_method,
+               order_type,
                delivery_address,
                delivery_detail_address,
                delivery_phone,
@@ -125,6 +131,7 @@
     <select id="selectOrderList" resultMap="OrderListResponseMap">
         SELECT
         o.order_id,
+        o.order_type,
         s.name as store_name,
         o.status,
         CASE
@@ -137,7 +144,7 @@
         ELSE '확인 중'
         END as status_description,
         o.total_amount,
-        (SELECT COUNT(*) FROM tb_order_items WHERE order_id = o.order_id) as item_count,
+        (SELECT COALESCE(SUM(quantity), 0) FROM tb_order_items WHERE order_id = o.order_id) as item_count,
         o.created_datetime,
         CASE
         WHEN o.status = 'PENDING' THEN '주문 접수 대기중'
@@ -189,6 +196,7 @@
                o.total_amount,
                o.delivery_fee,
                o.payment_method,
+               o.order_type,
                o.order_request,
                o.delivery_address,
                o.delivery_detail_address,
