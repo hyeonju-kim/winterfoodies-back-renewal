@@ -18,8 +18,8 @@ import org.springframework.util.StringUtils;
 
 import jakarta.servlet.http.HttpServletRequest;
 import javax.crypto.SecretKey;
+import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -135,7 +135,7 @@ public class TokenProvider {
 
             // Redis에 블랙리스트로 등록 (만료시간까지만 저장)
             String blacklistKey = BLACKLIST_KEY_PREFIX + token;
-            redisTemplate.opsForValue().set(blacklistKey, "blacklisted", ttl, TimeUnit.SECONDS);
+            redisTemplate.opsForValue().set(blacklistKey, "blacklisted", Duration.ofSeconds(ttl));
 
             log.info("[invalidateToken] 토큰이 블랙리스트에 추가되었습니다. TTL: {}초", ttl);
             return true;
@@ -165,7 +165,7 @@ public class TokenProvider {
 
             // 현재 시간을 저장하여 이 시간 이전에 발급된 토큰들은 모두 무효화
             redisTemplate.opsForValue().set(userInvalidationKey, String.valueOf(timestamp),
-                    refreshTokenExpireTime, TimeUnit.MILLISECONDS);
+                    Duration.ofMillis(refreshTokenExpireTime));
 
             log.info("[invalidateAllUserTokens] 사용자 {}의 모든 토큰이 무효화되었습니다", userId);
             return true;

@@ -31,8 +31,7 @@ public class OrderRequest {
     private Long storeId;
 
     @NotEmpty(message = "주문 항목은 필수입니다")
-    @Valid
-    private List<OrderItem> items;
+    private List<@Valid OrderItem> items;
 
     @NotNull(message = "배송 주소는 필수입니다")
     @Valid

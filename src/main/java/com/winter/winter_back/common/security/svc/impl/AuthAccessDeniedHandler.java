@@ -1,6 +1,6 @@
 package com.winter.winter_back.common.security.svc.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.winter.winter_back.common.dto.ResponseBaseDto;
 import com.winter.winter_back.common.exception.ExceptionWrapperUtil;
 import lombok.RequiredArgsConstructor;

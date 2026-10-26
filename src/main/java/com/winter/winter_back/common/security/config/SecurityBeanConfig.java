@@ -1,6 +1,6 @@
 package com.winter.winter_back.common.security.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.winter.winter_back.common.exception.ExceptionWrapperUtil;
 import com.winter.winter_back.common.security.dto.ComSecurityInfoDto;
 import com.winter.winter_back.common.security.svc.impl.AuthAccessDeniedHandler;
