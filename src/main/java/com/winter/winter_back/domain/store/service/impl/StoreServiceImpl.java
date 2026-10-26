@@ -66,6 +66,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public StoreDetailResponse getStoreDetail(Long storeId, Double lat, Double lng) {
         StoreDto store = storeDao.findById(storeId);
+
         if (store == null) {
             throw new BizException("매장을 찾을 수 없습니다.");
         }

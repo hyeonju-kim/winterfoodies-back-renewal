@@ -55,7 +55,6 @@
                s.delivery_fee,
                s.delivery_time,
                s.status,
-               s.image_url,
                s.business_number,
                s.is_featured
         FROM tb_favorites f
@@ -155,7 +154,6 @@
                s.delivery_fee,
                s.delivery_time,
                s.status,
-               s.image_url,
                s.business_number,
                s.is_featured
         FROM tb_favorites f

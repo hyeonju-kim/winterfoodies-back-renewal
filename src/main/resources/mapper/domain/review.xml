@@ -49,7 +49,6 @@
                r.modified_datetime,
                s.name      as store_name,
                s.category  as store_category,
-               s.image_url as store_image_url,
                u.name      as user_name
         FROM tb_review r
                  INNER JOIN tb_store s ON r.store_id = s.id
@@ -72,7 +71,6 @@
                r.modified_datetime,
                s.name      as store_name,
                s.category  as store_category,
-               s.image_url as store_image_url,
                u.name      as user_name
         FROM tb_review r
                  INNER JOIN tb_store s ON r.store_id = s.id
@@ -109,7 +107,6 @@
                r.modified_datetime,
                s.name      as store_name,
                s.category  as store_category,
-               s.image_url as store_image_url,
                u.name      as user_name
         FROM tb_review r
                  INNER JOIN tb_store s ON r.store_id = s.id
