@@ -10,34 +10,45 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
     jdbc-type-for-null: NULL
+
 logging:
   config: classpath:log/logback.xml
   level:
-    org.springframework.security: DEBUG
+    org.springframework.jdbc.core: DEBUG
+    org.mybatis: DEBUG
+    com/winter/winter_back/common/security: debug
+
+############################
+# JWT config
+############################
+jwt:
+  secret: ${JWT_SECRET}  # 필수, 로컬은 .env
+  expire-time:
+    access: 30     # 30분
+    refresh: 1440  # 24시간
 
 ############################
 # Spring config
 ############################
 spring:
+  # 로컬 실행 시 프로젝트 루트 .env(git 제외)를 읽어 환경변수처럼 사용. 배포 환경은 실제 환경변수로 주입
+  config:
+    import: optional:file:.env[.properties]
   output:
     ansi:
       enabled: ALWAYS
   application:
     name: winter_back
   datasource:
-    url: jdbc:log4jdbc:mariadb://localhost:3307/winter_app?allowPublicKeyRetrieval=true&useSSL=false
-    username: root
-    password: 1234
+    url: ${DB_URL:jdbc:log4jdbc:mariadb://localhost:3307/winter_app?allowPublicKeyRetrieval=true&useSSL=false}  # 기본값 = 로컬 도커 DB
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}  # 필수, 로컬은 .env
     driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
-  # JPA SQL 로깅 설정 추가
-  jpa:
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-  security:
-    application-name: MGMT
 
+  ############################
+  ## Spring security
+  ############################
+  security:
     # Spring Security에서 보안 필터를 완전히 무시할 경로들 (정적 리소스용)
     # 이 경로들은 Spring Security 필터 체인을 아예 거치지 않음
     # 주로 CSS, JS, 이미지 같은 정적 파일들이나 헬스체크용 엔드포인트
@@ -55,26 +66,9 @@ spring:
       ,/stores/**
       ,/menu/**
       ,/reviews/**
-    # 완전히 인증된 사용자만 접근 가능한 URL 패턴들
-    # 로그인은 했지만 "Remember Me" 같은 부분 인증이 아닌
-    # 완전한 인증(아이디/비밀번호로 직접 로그인)을 거친 사용자만 접근 가능
-    fully-authenticated-url-patterns:
-      /common/**
-      ,/logout
-    login:
-      login-page-url: /error/401
-      processing-url: /login
-      success-url: /
-      secret-key: T7zLmnao78Rd4fQmmbTyG9o6jA9XGT9f
-    logout:
-      req-url: /logout
-    reload-role-fixed-rate-string: 86400000
-    metrics:
-      tags:
-        application: MGMT
   redis:
-    host: localhost
-    port: 6379
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
   cache:
     type: redis
 
