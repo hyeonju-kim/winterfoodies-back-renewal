@@ -24,6 +24,7 @@ import urllib.request
 
 SUCCESS = '20000000'
 UNAUTHORIZED = '40001001'
+NOT_FOUND_URL = '30003001'
 TOKEN_WRONG = '40001007'
 TOKEN_BLACKLISTED = '40001008'
 TOKEN_REFRESH_EXPIRE = '40001009'
@@ -48,8 +49,10 @@ class SmokeTest:
             request.add_header('Authorization', 'Bearer ' + token)
         try:
             with urllib.request.urlopen(request) as response:
+                http_status = response.status
                 text = response.read().decode('utf-8')
         except urllib.error.HTTPError as error:
+            http_status = error.code
             text = error.read().decode('utf-8')
         except urllib.error.URLError as error:
             print('서버에 연결할 수 없습니다: %s (%s)' % (self.base_url, error.reason))
@@ -66,6 +69,10 @@ class SmokeTest:
 
         data = payload.get('data') or {}
         is_passed = code == expected_code
+        # 응답 본문의 status 와 실제 HTTP 상태 코드가 같아야 한다 (에러도 200 으로 내려가던 문제 방지)
+        if is_passed and payload.get('status') is not None and payload.get('status') != http_status:
+            is_passed = False
+            description = 'HTTP 상태 %s != 본문 status %s' % (http_status, payload.get('status'))
         if is_passed and check is not None:
             message = check(data)
             if message:
@@ -89,6 +96,7 @@ class SmokeTest:
 
         # 가게·메뉴 조회 (비로그인)
         self.call('카테고리', 'GET', '/categories')
+        self.call('없는 URL 404', 'GET', '/no-such-path', token=access_token, expected_code=NOT_FOUND_URL)
         self.call('가게 목록', 'GET', '/stores?lat=37.5&lng=127.0&page=0&size=10', check=check_store_list)
         first_page = self.call('가게 목록 1페이지(1건)', 'GET', '/stores?lat=37.5&lng=127.0&page=0&size=1',
                                check=lambda data: None if len(data.get('stores', [])) == 1 else '1건이 아님')
