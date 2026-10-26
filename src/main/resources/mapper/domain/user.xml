@@ -23,17 +23,17 @@
                  )
     </insert>
 
-    <insert id="regUserAuthMap" parameterType="java.lang.String">
+    <insert id="regUserAuthMap">
         /*
         SQL ID: com.winter.winter_back.domain.user.dao.UserDao.regUserAuthMap
-        SQL 명: 사용자 기본 권한 할당 (ROLE_USER, 손님)
+        SQL 명: 사용자 권한 할당 (ROLE_USER 손님 / ROLE_OWNER 사장님)
         */
         INSERT INTO tb_auth_user_map (
                                        auth_id
                                      , user_id
         ) VALUES (
-                   'ROLE_USER'
-                 , #{id}
+                   #{authId}
+                 , #{userId}
                  )
     </insert>
 

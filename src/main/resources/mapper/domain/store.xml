@@ -209,4 +209,22 @@
         LIMIT #{limit}
     </select>
 
+    <!-- 가게 통계 다시 계산 (목록·홈 별점과 상세 별점이 같도록 실제 리뷰·주문에서 계산) -->
+    <insert id="mergeStoreStats">
+        /*
+        SQL ID: com.winter.winter_back.domain.store.dao.StoreDao.mergeStoreStats
+        SQL 명: 가게 통계 다시 계산
+        */
+        INSERT INTO tb_store_stats (store_id, average_rating, total_reviews, total_orders, updated_at)
+        SELECT #{storeId}
+             , (SELECT COALESCE(ROUND(AVG(r.rating), 2), 0) FROM tb_review r WHERE r.store_id = #{storeId})
+             , (SELECT COUNT(*) FROM tb_review r WHERE r.store_id = #{storeId})
+             , (SELECT COUNT(*) FROM tb_order o WHERE o.store_id = #{storeId} AND o.status = 'DELIVERED')
+             , NOW()
+        ON DUPLICATE KEY UPDATE average_rating = VALUES(average_rating)
+                              , total_reviews  = VALUES(total_reviews)
+                              , total_orders   = VALUES(total_orders)
+                              , updated_at     = VALUES(updated_at)
+    </insert>
+
 </mapper>

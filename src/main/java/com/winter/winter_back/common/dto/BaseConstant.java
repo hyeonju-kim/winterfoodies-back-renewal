@@ -62,6 +62,8 @@ public class BaseConstant {
     public static final String ROLE_TOP = "ROLE_SYSTEM";
     /* 기본 사용자 역할(모든 사용자가 기본으로 할당되는 역할) */
     public static final String ROLE_DEFAULT = "ROLE_USER";
+    /* 사장님 역할 (사장님으로 가입한 사용자, /owner/** 사용) */
+    public static final String ROLE_OWNER = "ROLE_OWNER";
 
     /* CRUD 권한 구분 */
     /**

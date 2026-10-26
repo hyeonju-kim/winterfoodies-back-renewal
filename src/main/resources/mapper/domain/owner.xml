@@ -303,6 +303,28 @@
          WHERE id = #{storeId}
     </update>
 
+    <!-- 가게 등록 (영업 종료 상태로 시작 - 사장님이 영업 시작을 눌러야 주문이 열린다) -->
+    <insert id="regStore" useGeneratedKeys="true" keyProperty="storeId" keyColumn="id">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.regStore
+        SQL 명: 가게 등록
+        */
+        INSERT INTO tb_store (name, category, description, phone, address, latitude, longitude,
+                              status, min_order_amount, delivery_fee, delivery_time, owner_id)
+        VALUES (#{name}, #{category}, #{description}, #{phone}, #{address}, #{latitude}, #{longitude},
+                'CLOSED', #{minOrderAmount}, 0, #{waitMinutes}, #{ownerId})
+    </insert>
+
+    <!-- 가게 간식 종류 (검색에서 한글 이름으로 찾도록) -->
+    <insert id="regStoreCategory">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.regStoreCategory
+        SQL 명: 가게 간식 종류 등록
+        */
+        INSERT INTO tb_store_category (store_id, category_code, category_name)
+        VALUES (#{storeId}, #{categoryCode}, #{categoryName})
+    </insert>
+
     <!-- 요일별 영업시간 -->
     <select id="getStoreHours" resultType="com.winter.winter_back.domain.owner.dto.OwnerHoursResponse">
         /*

@@ -17,6 +17,7 @@ API 스모크(회귀) 테스트 - 주요 API 를 실제 서버에 순서대로 �
 """
 import argparse
 import json
+from decimal import Decimal, ROUND_HALF_UP
 import sys
 import time
 import urllib.error
@@ -54,10 +55,15 @@ INVALID_STORE_STATUS = '61001008'
 INVALID_BUSINESS_HOURS = '61001005'
 INVALID_SALES_PERIOD = '63001015'
 ORDER_NOT_FOUND = '63001001'
+OWNER_STORE_NOT_FOUND = '61001007'
+OWNER_STORE_EXISTS = '61001009'
+INVALID_STORE_CATEGORY = '61001010'
 OWNER_ID, OWNER_PASSWORD = 'owner1', 'Owner1234!'      # 테스트 데이터: 1번 매장 사장님
 OTHER_OWNER_ID = 'owner2'                              # 2번 매장 사장님
 HIDDEN_NOTICE_ID = 4  # 테스트 데이터의 비공개 공지
 CLOSED_STORE_ID = 8  # 테스트 데이터의 영업 종료(CLOSED) 매장
+SEED_STORE_COUNT = 8  # 테스트 데이터로 넣은 매장 수 (1~8번)
+REGISTER_OWNER_ID = 'smoke_store_owner'  # 가게 등록 확인용 고정 사장님 (매번 새 가게가 쌓이지 않게 한 번만 등록)
 
 
 class SmokeTest:
@@ -264,7 +270,10 @@ class SmokeTest:
                   check=lambda data: None if all(review.get('userId') is None for review in data.get('dataList', []))
                   else '공개 목록에 userId 노출')
         self.call('내 리뷰', 'GET', '/reviews/my', token=access_token)
-        self.call('리뷰 통계', 'GET', '/reviews/store/1/stats')
+        review_stats = self.call('리뷰 통계', 'GET', '/reviews/store/1/stats')
+        if review_stats:
+            self.call('가게 목록 별점 = 상세 별점', 'GET', '/stores?lat=37.5&lng=127.0&page=0&size=20',
+                      check=lambda data: check_list_rating(data, review_stats))
 
         # 검색: 가게 이름·간식 종류 이름·메뉴 이름으로 찾고, % 는 와일드카드로 쓰이지 않는다
         self.call('검색: 가게 이름(호떡)', 'GET', '/stores/search?keyword=%s' % urllib.parse.quote('호떡'),
@@ -320,6 +329,7 @@ class SmokeTest:
                   {'storeId': 1, 'orderOrderId': 'X', 'rating': 5, 'content': 'x'}, expected_code=UNAUTHORIZED)
 
         self.run_account_settings(user_id + 's', password)
+        self.run_store_registration(user_id + 'o', password)
 
     def run_owner(self, owner_token, customer_token, pickup_body):
         """사장님: 권한·내 가게·대기시간·영업 상태·주문 거절·순서 위반·다른 가게 주문·품절"""
@@ -462,6 +472,63 @@ class SmokeTest:
                       {'days': [h for h in hours if h.get('openTime') or h.get('isHoliday')]
                        or [dict(week[0])]}, token=owner_token)
 
+    def silent_login(self, user_id, password):
+        """결과에 남기지 않는 로그인 (고정 계정이 이미 있는지 확인용)"""
+        token = self.call('-', 'POST', '/login', {'username': user_id, 'password': password}).get('accessToken')
+        self.results.pop()
+        return token
+
+    def run_store_registration(self, user_id, password):
+        """사장님 가입 → 가게 없는 상태 → 입력 검사 → 가게 등록(고정 계정 1회) → 중복 등록 거부"""
+        self.call('[가게등록] 손님 가입은 사장님 아님', 'POST', '/user/register',
+                  {'id': user_id + 'c', 'pw': password, 'name': 'customer'})
+        customer_token = self.silent_login(user_id + 'c', password)
+        self.call('[가게등록] 손님 내 정보', 'GET', '/user/me', token=customer_token,
+                  check=lambda data: None if data.get('isOwner') is False else 'isOwner=%s' % data.get('isOwner'))
+
+        self.call('[가게등록] 사장님으로 가입', 'POST', '/user/register',
+                  {'id': user_id, 'pw': password, 'name': 'owner', 'isOwner': True})
+        token = self.call('[가게등록] 사장님 로그인', 'POST', '/login',
+                          {'username': user_id, 'password': password}).get('accessToken')
+        self.call('[가게등록] 가게 없는 사장님 내 정보', 'GET', '/user/me', token=token,
+                  check=lambda data: None if data.get('isOwner') is True and data.get('storeId') is None
+                  else 'isOwner=%s storeId=%s' % (data.get('isOwner'), data.get('storeId')))
+        self.call('[가게등록] 가게 없으면 내 가게 조회 거부', 'GET', '/owner/store', token=token,
+                  expected_code=OWNER_STORE_NOT_FOUND)
+
+        store_body = {'name': '등록 테스트 가게', 'category': 'TAKOYAKI', 'description': '스모크 테스트로 등록한 가게',
+                      'phone': '', 'address': '제주 테스트 위치', 'latitude': 33.25, 'longitude': 126.56}
+        self.call('[가게등록] 손님은 가게 등록 거부', 'POST', '/owner/store', store_body, token=customer_token,
+                  expected_code=PERMISSION_DENIED)
+        self.call('[가게등록] 없는 간식 종류 거부', 'POST', '/owner/store', dict(store_body, category='PIZZA'),
+                  token=token, expected_code=INVALID_STORE_CATEGORY)
+        self.call('[가게등록] 위치 없으면 거부', 'POST', '/owner/store', dict(store_body, latitude=None),
+                  token=token, expected_code=INVALID_INPUT)
+        self.call('[가게등록] 국내 밖 위치 거부', 'POST', '/owner/store', dict(store_body, latitude=10.0),
+                  token=token, expected_code=INVALID_INPUT)
+
+        # 실제 등록은 고정 계정으로 한 번만 (매번 새 가게가 손님 목록에 쌓이지 않게)
+        owner_token = self.silent_login(REGISTER_OWNER_ID, password)
+        if not owner_token:
+            self.call('[가게등록] 고정 사장님 가입', 'POST', '/user/register',
+                      {'id': REGISTER_OWNER_ID, 'pw': password, 'name': '등록테스트', 'isOwner': True})
+            owner_token = self.silent_login(REGISTER_OWNER_ID, password)
+        store_id = self.call('[가게등록] 고정 사장님 내 정보', 'GET', '/user/me', token=owner_token).get('storeId')
+        if store_id is None:
+            store = self.call('[가게등록] 가게 등록(영업 종료로 시작)', 'POST', '/owner/store', store_body, token=owner_token,
+                              check=lambda data: None if data.get('status') == 'CLOSED' and data.get('category') == 'TAKOYAKI'
+                              else 'status=%s category=%s' % (data.get('status'), data.get('category')))
+            store_id = store.get('storeId')
+            self.call('[가게등록] 기본 영업시간 7일', 'GET', '/owner/store/hours', token=owner_token,
+                      check=lambda data: None if len(data) == 7 else '%s일' % len(data))
+            self.call('[가게등록] 손님 검색(간식 종류 한글)', 'GET',
+                      '/stores/search?keyword=%s' % urllib.parse.quote('타코야키'),
+                      check=lambda data: None if store_id in [s.get('id') for s in data.get('stores', [])]
+                      else '검색 결과에 없음')
+        self.call('[가게등록] 손님 가게 상세', 'GET', '/stores/%s' % store_id)
+        self.call('[가게등록] 두 번째 가게 등록 거부', 'POST', '/owner/store', store_body, token=owner_token,
+                  expected_code=OWNER_STORE_EXISTS)
+
     def run_account_settings(self, user_id, password):
         """환경설정: 내 정보 수정 → 비밀번호 변경(모든 토큰 무효화) → 회원탈퇴(같은 아이디 재가입 불가)"""
         self.call('[설정] 회원가입', 'POST', '/user/register', {'id': user_id, 'pw': password, 'name': 'before'})
@@ -518,13 +585,28 @@ def check_amount(data, expected_amount):
 
 
 def check_store_list(data):
-    """매장 목록: 같은 매장이 중복되지 않고, 이미지가 있는 매장은 imageUrl 이 채워져야 한다"""
+    """매장 목록: 같은 매장이 중복되지 않고, 테스트 데이터 매장(이미지 있음)은 imageUrl 이 채워져야 한다
+    (가게 등록으로 새로 만든 매장은 아직 사진이 없다)"""
     stores = data.get('stores', [])
     store_ids = [store.get('id') for store in stores]
     if len(store_ids) != len(set(store_ids)):
         return '매장 중복: %s' % store_ids
-    if any(not store.get('imageUrl') for store in stores):
+    if any(not store.get('imageUrl') for store in stores if store.get('id', 0) <= SEED_STORE_COUNT):
         return 'imageUrl 누락'
+    return None
+
+
+def check_list_rating(data, review_stats):
+    """목록·홈 별점(가게 통계)이 상세 화면 별점(실제 리뷰 계산)과 같아야 한다"""
+    store = next((store for store in data.get('stores', []) if store.get('id') == 1), None)
+    if store is None:
+        return '목록에 1번 가게 없음'
+    # DB 의 ROUND 와 같게 사사오입 (파이썬 round 는 4.975 → 4.97)
+    expected_rating = float(Decimal(str(review_stats.get('averageRating') or 0)).quantize(Decimal('0.01'), ROUND_HALF_UP))
+    if abs(float(store.get('averageRating') or 0) - expected_rating) > 0.005:
+        return '목록 별점 %s / 상세 %s' % (store.get('averageRating'), expected_rating)
+    if store.get('reviewCount') != review_stats.get('totalReviews'):
+        return '목록 리뷰 수 %s / 상세 %s' % (store.get('reviewCount'), review_stats.get('totalReviews'))
     return None
 
 

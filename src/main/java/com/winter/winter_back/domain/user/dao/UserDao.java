@@ -14,12 +14,13 @@ import org.apache.ibatis.annotations.Param;
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
  * 26. 10. 26.       hj kim             내 정보 조회·수정, 비밀번호 변경, 회원탈퇴 추가
+ * 26. 10. 26.       hj kim             가입 권한을 손님·사장님 중 선택해 할당
  */
 @Mapper
 public interface UserDao {
     boolean existsByUsername(String username); // 아이디 사용 여부 (탈퇴한 아이디도 포함 → 재사용 불가)
     void regUser(UserDto userDto); // 회원가입
-    boolean regUserAuthMap(String username); // 기본 권한(ROLE_USER) 할당
+    boolean regUserAuthMap(@Param("userId") String userId, @Param("authId") String authId); // 권한 할당 (손님 ROLE_USER / 사장님 ROLE_OWNER)
 
     UserDto getUser(@Param("userId") String userId); // 사용 중인 회원의 아이디·이름·전화번호
     String getUserPassword(@Param("userId") String userId); // 사용 중인 회원의 암호화된 비밀번호
