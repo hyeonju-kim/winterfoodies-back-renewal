@@ -5,6 +5,7 @@ import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
+import com.winter.winter_back.domain.owner.dto.OwnerSalesResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
 
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.List;
  * -----------------------------------------------------------
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보, 영업시간 추가
+ * 26. 10. 26.       hj kim             매출 조회 추가
  */
 public interface OwnerSvc {
 
@@ -47,4 +49,6 @@ public interface OwnerSvc {
     List<OwnerHoursResponse> getHours(String userId); // 영업시간 (월~일 7개)
 
     List<OwnerHoursResponse> modHours(String userId, OwnerRequests.HoursRequest request); // 영업시간 수정
+
+    OwnerSalesResponse getSales(String userId, String period); // 매출 (DAY 7일 / WEEK 8주 / MONTH 6개월)
 }

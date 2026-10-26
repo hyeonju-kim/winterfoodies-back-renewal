@@ -386,6 +386,10 @@ reject_reason_required:
   code: 63001014
   desc: "주문을 거절하려면 사유를 입력해주세요."
   status: 400
+invalid_sales_period:
+  code: 63001015
+  desc: "매출 기간은 DAY, WEEK, MONTH 중 하나여야 합니다."
+  status: 400
 
 # 9-2. 장바구니 관련 (63002xxx)
 cart_empty:

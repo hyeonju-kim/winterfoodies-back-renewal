@@ -4,11 +4,13 @@ import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
+import com.winter.winter_back.domain.owner.dto.OwnerSalesResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerSaveDtos;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -21,6 +23,7 @@ import java.util.List;
  * -----------------------------------------------------------
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보, 영업시간 추가
+ * 26. 10. 26.       hj kim             매출(날짜별 매출·인기 메뉴·취소 수) 추가
  */
 @Mapper
 public interface OwnerDao {
@@ -70,4 +73,17 @@ public interface OwnerDao {
     List<OwnerHoursResponse> getStoreHours(@Param("storeId") Long storeId); // 요일별 영업시간
 
     int mergeStoreHours(@Param("storeId") Long storeId, @Param("day") OwnerRequests.DayHours day); // 요일 영업시간 저장 (있으면 수정)
+
+    List<OwnerSalesResponse.DailySales> getDailySales(@Param("storeId") Long storeId,
+                                                      @Param("fromDate") LocalDate fromDate,
+                                                      @Param("toDate") LocalDate toDate); // 날짜별 매출 (받아간 주문)
+
+    List<OwnerSalesResponse.TopMenu> getTopMenus(@Param("storeId") Long storeId,
+                                                 @Param("fromDate") LocalDate fromDate,
+                                                 @Param("toDate") LocalDate toDate,
+                                                 @Param("limit") int limit); // 많이 팔린 메뉴
+
+    int getCancelCount(@Param("storeId") Long storeId,
+                       @Param("fromDate") LocalDate fromDate,
+                       @Param("toDate") LocalDate toDate); // 취소 주문 수
 }

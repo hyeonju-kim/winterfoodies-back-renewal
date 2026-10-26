@@ -330,4 +330,57 @@
                               , is_holiday = VALUES(is_holiday)
     </insert>
 
+    <!-- 날짜별 매출 (받아간 주문) -->
+    <select id="getDailySales" resultType="com.winter.winter_back.domain.owner.dto.OwnerSalesResponse$DailySales">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getDailySales
+        SQL 명: 사장님 가게 날짜별 매출
+        */
+        SELECT DATE(o.created_datetime)  AS sales_date
+             , SUM(o.total_amount)        AS sales
+             , COUNT(*)                   AS order_count
+          FROM tb_order o
+         WHERE o.store_id = #{storeId}
+           AND o.status = 'DELIVERED'
+           AND o.created_datetime &gt;= #{fromDate}
+           AND o.created_datetime &lt; DATE_ADD(#{toDate}, INTERVAL 1 DAY)
+         GROUP BY DATE(o.created_datetime)
+         ORDER BY sales_date
+    </select>
+
+    <!-- 많이 팔린 메뉴 (받아간 주문, 수량 순) -->
+    <select id="getTopMenus" resultType="com.winter.winter_back.domain.owner.dto.OwnerSalesResponse$TopMenu">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getTopMenus
+        SQL 명: 사장님 가게 인기 메뉴
+        */
+        SELECT m.name                          AS menu_name
+             , SUM(oi.quantity)                AS quantity
+             , SUM(oi.price * oi.quantity)     AS sales
+          FROM tb_order o
+          JOIN tb_order_items oi ON oi.order_id = o.order_id
+          JOIN tb_menus m ON m.id = oi.menu_id
+         WHERE o.store_id = #{storeId}
+           AND o.status = 'DELIVERED'
+           AND o.created_datetime &gt;= #{fromDate}
+           AND o.created_datetime &lt; DATE_ADD(#{toDate}, INTERVAL 1 DAY)
+         GROUP BY m.id, m.name
+         ORDER BY quantity DESC, sales DESC, m.id
+         LIMIT #{limit}
+    </select>
+
+    <!-- 취소 주문 수 -->
+    <select id="getCancelCount" resultType="int">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getCancelCount
+        SQL 명: 사장님 가게 취소 주문 수
+        */
+        SELECT COUNT(*)
+          FROM tb_order o
+         WHERE o.store_id = #{storeId}
+           AND o.status = 'CANCELLED'
+           AND o.created_datetime &gt;= #{fromDate}
+           AND o.created_datetime &lt; DATE_ADD(#{toDate}, INTERVAL 1 DAY)
+    </select>
+
 </mapper>

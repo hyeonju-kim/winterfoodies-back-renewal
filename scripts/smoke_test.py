@@ -52,6 +52,7 @@ INVALID_ORDER_STATUS_CHANGE = '63001013'
 REJECT_REASON_REQUIRED = '63001014'
 INVALID_STORE_STATUS = '61001008'
 INVALID_BUSINESS_HOURS = '61001005'
+INVALID_SALES_PERIOD = '63001015'
 ORDER_NOT_FOUND = '63001001'
 OWNER_ID, OWNER_PASSWORD = 'owner1', 'Owner1234!'      # 테스트 데이터: 1번 매장 사장님
 OTHER_OWNER_ID = 'owner2'                              # 2번 매장 사장님
@@ -428,6 +429,18 @@ class SmokeTest:
         self.call('[사장님] 가게 정보 원래대로', 'PUT', '/owner/store',
                   {'name': store.get('name'), 'description': store.get('description'), 'phone': store.get('phone'),
                    'minOrderAmount': store.get('minOrderAmount')}, token=owner_token)
+
+        # 매출: 일별 7칸·주별 8칸·월별 6칸, 합계 = 칸 합, 인기 메뉴
+        for period, size in (('DAY', 7), ('WEEK', 8), ('MONTH', 6)):
+            self.call('[사장님] 매출 %s' % period, 'GET', '/owner/sales?period=%s' % period, token=owner_token,
+                      check=lambda data, size=size: None
+                      if len(data.get('points', [])) == size
+                      and float(data.get('totalSales')) == sum(float(p.get('sales')) for p in data['points'])
+                      and data.get('topMenus') is not None
+                      else 'points=%s total=%s' % (len(data.get('points', [])), data.get('totalSales')))
+        self.call('[사장님] 잘못된 매출 기간 거부', 'GET', '/owner/sales?period=YEAR', token=owner_token,
+                  expected_code=INVALID_SALES_PERIOD)
+        self.call('[손님] 매출 조회 거부', 'GET', '/owner/sales', token=customer_token, expected_code=PERMISSION_DENIED)
 
         # 영업시간: 월~일 7개, 휴무가 아니면 시각 필수·같은 시각 불가·요일 중복 불가
         hours = self.call('[사장님] 영업시간 7일', 'GET', '/owner/store/hours', token=owner_token,

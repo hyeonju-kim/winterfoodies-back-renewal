@@ -6,6 +6,7 @@ import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
+import com.winter.winter_back.domain.owner.dto.OwnerSalesResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
 import com.winter.winter_back.domain.owner.svc.OwnerSvc;
 import jakarta.validation.Valid;
@@ -26,6 +27,7 @@ import java.util.List;
  * -----------------------------------------------------------
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보 수정, 영업시간 조회·수정 추가
+ * 26. 10. 26.       hj kim             매출 조회 추가
  */
 @Slf4j
 @RestController
@@ -141,6 +143,15 @@ public class OwnerCtrl {
     public List<OwnerHoursResponse> modHours(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
                                              @RequestBody @Valid OwnerRequests.HoursRequest request) {
         return ownerSvc.modHours(loginUserInfo.getUserId(), request);
+    }
+
+    /**
+     * 매출 (period: DAY 최근 7일 / WEEK 최근 8주 / MONTH 최근 6개월)
+     */
+    @GetMapping("/sales")
+    public OwnerSalesResponse getSales(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                       @RequestParam(defaultValue = "DAY") String period) {
+        return ownerSvc.getSales(loginUserInfo.getUserId(), period);
     }
 
     /**

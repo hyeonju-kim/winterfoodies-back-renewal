@@ -10,6 +10,7 @@ import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
+import com.winter.winter_back.domain.owner.dto.OwnerSalesResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerSaveDtos;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
 import com.winter.winter_back.domain.owner.svc.OwnerSvc;
@@ -18,12 +19,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,6 +42,7 @@ import java.util.Set;
  * -----------------------------------------------------------
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보 수정, 영업시간 조회·수정 추가
+ * 26. 10. 26.       hj kim             매출 조회(일별·주별·월별, 인기 메뉴) 추가
  */
 @Slf4j
 @Service
@@ -47,6 +53,7 @@ public class OwnerSvcImpl implements OwnerSvc {
     private static final Set<String> STORE_STATUSES = Set.of("OPEN", "TEMPORARILY_CLOSED", "CLOSED");
     private static final int MAX_LIMIT = 50;
     private static final String DEFAULT_MENU_CATEGORY = "기본";
+    private static final int TOP_MENU_COUNT = 5;
 
     // 주문 단계는 이 순서로만 바뀐다: 접수 → 확인 → 조리 → 픽업대기 → 픽업완료, 확인 단계까지는 거절(취소) 가능
     private static final Map<OrderStatus, Set<OrderStatus>> NEXT_STATUSES = Map.of(
@@ -293,6 +300,86 @@ public class OwnerSvcImpl implements OwnerSvc {
                 .description(description)
                 .price(request.getPrice())
                 .build();
+    }
+
+    /**
+     * Author      : hj kim
+     * Description : 매출. 받아간(DELIVERED) 주문을 날짜별로 가져와 기간 단위로 묶는다.
+     *               DAY = 오늘 포함 최근 7일, WEEK = 이번 주(월요일 시작) 포함 최근 8주, MONTH = 이번 달 포함 최근 6개월.
+     *               매출이 없는 칸도 0 으로 채워 그래프가 비지 않게 한다
+     * Date        : 26. 10. 26.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public OwnerSalesResponse getSales(String userId, String period) {
+        Long storeId = getStoreId(userId);
+        String unit = period == null ? "DAY" : period.toUpperCase();
+        LocalDate today = LocalDate.now();
+
+        List<LocalDate> starts = new ArrayList<>();
+        switch (unit) {
+            case "DAY" -> {
+                for (int back = 6; back >= 0; back--) {
+                    starts.add(today.minusDays(back));
+                }
+            }
+            case "WEEK" -> {
+                LocalDate thisWeek = today.with(DayOfWeek.MONDAY);
+                for (int back = 7; back >= 0; back--) {
+                    starts.add(thisWeek.minusWeeks(back));
+                }
+            }
+            case "MONTH" -> {
+                LocalDate thisMonth = today.withDayOfMonth(1);
+                for (int back = 5; back >= 0; back--) {
+                    starts.add(thisMonth.minusMonths(back));
+                }
+            }
+            default -> throw new BizException("invalid_sales_period");
+        }
+        LocalDate fromDate = starts.get(0);
+
+        List<OwnerSalesResponse.DailySales> daily = ownerDao.getDailySales(storeId, fromDate, today);
+        List<OwnerSalesResponse.SalesPoint> points = new ArrayList<>();
+        for (int index = 0; index < starts.size(); index++) {
+            LocalDate start = starts.get(index);
+            LocalDate nextStart = index + 1 < starts.size() ? starts.get(index + 1) : today.plusDays(1);
+            BigDecimal sales = BigDecimal.ZERO;
+            int orderCount = 0;
+            for (OwnerSalesResponse.DailySales day : daily) {
+                if (!day.getSalesDate().isBefore(start) && day.getSalesDate().isBefore(nextStart)) {
+                    sales = sales.add(day.getSales());
+                    orderCount += day.getOrderCount();
+                }
+            }
+            points.add(OwnerSalesResponse.SalesPoint.builder()
+                    .label(toSalesLabel(unit, start))
+                    .startDate(start)
+                    .sales(sales)
+                    .orderCount(orderCount)
+                    .build());
+        }
+
+        return OwnerSalesResponse.builder()
+                .period(unit)
+                .fromDate(fromDate)
+                .toDate(today)
+                .totalSales(points.stream().map(OwnerSalesResponse.SalesPoint::getSales).reduce(BigDecimal.ZERO, BigDecimal::add))
+                .orderCount(points.stream().mapToInt(OwnerSalesResponse.SalesPoint::getOrderCount).sum())
+                .cancelCount(ownerDao.getCancelCount(storeId, fromDate, today))
+                .points(points)
+                .topMenus(ownerDao.getTopMenus(storeId, fromDate, today, TOP_MENU_COUNT))
+                .build();
+    }
+
+    // 그래프 아래 이름: 일별 10/26(월), 주별 10/20~, 월별 10월
+    private String toSalesLabel(String unit, LocalDate start) {
+        return switch (unit) {
+            case "DAY" -> start.getMonthValue() + "/" + start.getDayOfMonth()
+                    + "(" + start.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.KOREAN) + ")";
+            case "WEEK" -> start.getMonthValue() + "/" + start.getDayOfMonth() + "~";
+            default -> start.getMonthValue() + "월";
+        };
     }
 
     private Long getStoreId(String userId) {
