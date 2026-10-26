@@ -43,6 +43,9 @@ RESTAURANT_CLOSED = '61001002'
 INVALID_INPUT = '30002003'
 REVIEW_ORDER_NOT_COMPLETED = '64001006'
 NOTICE_NOT_FOUND = '64002001'
+INVALID_PASSWORD = '60001004'
+USER_NOT_FOUND = '60001001'
+DUPLICATED = '41002001'
 HIDDEN_NOTICE_ID = 4  # 테스트 데이터의 비공개 공지
 CLOSED_STORE_ID = 8  # 테스트 데이터의 영업 종료(CLOSED) 매장
 
@@ -263,6 +266,7 @@ class SmokeTest:
         new_tokens = self.call('토큰 갱신', 'POST', '/auth/refresh',
                                {'accessToken': access_token, 'refreshToken': refresh_token}, token=access_token)
         latest_token = new_tokens.get('accessToken', access_token)
+        time.sleep(1.1)  # 토큰 무효화는 초 단위 → 발급과 다른 초에 로그아웃
         self.call('로그아웃', 'POST', '/auth/logout', token=latest_token)
         self.call('로그아웃 토큰 거부', 'GET', '/user/me', token=latest_token, expected_code=TOKEN_BLACKLISTED)
         self.call('토큰 없이 인증 API', 'GET', '/cart', expected_code=UNAUTHORIZED)
@@ -272,6 +276,47 @@ class SmokeTest:
         self.call('토큰 없이 내 리뷰 거부', 'GET', '/reviews/my', expected_code=UNAUTHORIZED)
         self.call('토큰 없이 리뷰 작성 거부', 'POST', '/reviews',
                   {'storeId': 1, 'orderOrderId': 'X', 'rating': 5, 'content': 'x'}, expected_code=UNAUTHORIZED)
+
+        self.run_account_settings(user_id + 's', password)
+
+    def run_account_settings(self, user_id, password):
+        """환경설정: 내 정보 수정 → 비밀번호 변경(모든 토큰 무효화) → 회원탈퇴(같은 아이디 재가입 불가)"""
+        self.call('[설정] 회원가입', 'POST', '/user/register', {'id': user_id, 'pw': password, 'name': 'before'})
+        token = self.call('[설정] 로그인', 'POST', '/login', {'username': user_id, 'password': password}).get('accessToken')
+
+        self.call('[설정] 내 정보 수정', 'PUT', '/user/me', {'name': '바뀐이름', 'tel': '01033334444'}, token=token,
+                  check=lambda data: None if data.get('name') == '바뀐이름' else 'name=%s' % data.get('name'))
+        self.call('[설정] 수정한 내 정보가 바로 보임', 'GET', '/user/me', token=token,
+                  check=lambda data: None if data.get('tel') == '01033334444' else 'tel=%s' % data.get('tel'))
+        self.call('[설정] 전화번호 형식 거부', 'PUT', '/user/me', {'name': 'x', 'tel': '010-3333-4444'}, token=token,
+                  expected_code=INVALID_INPUT)
+        self.call('[설정] 이름 빈 값 거부', 'PUT', '/user/me', {'name': ' ', 'tel': ''}, token=token,
+                  expected_code=INVALID_INPUT)
+
+        new_password = 'Changed123!'
+        self.call('[설정] 현재 비밀번호 틀리면 변경 거부', 'PUT', '/user/me/password',
+                  {'currentPassword': 'wrong', 'newPassword': new_password}, token=token, expected_code=INVALID_PASSWORD)
+        self.call('[설정] 새 비밀번호 8자 미만 거부', 'PUT', '/user/me/password',
+                  {'currentPassword': password, 'newPassword': 'short'}, token=token, expected_code=INVALID_INPUT)
+        # 토큰 무효화는 초 단위라, 같은 초에 발급된 토큰은 막히지 않는다 → 발급과 다른 초가 되도록 잠시 기다림
+        time.sleep(1.1)
+        self.call('[설정] 비밀번호 변경', 'PUT', '/user/me/password',
+                  {'currentPassword': password, 'newPassword': new_password}, token=token)
+        self.call('[설정] 변경 전 토큰 거부', 'GET', '/user/me', token=token, expected_code=TOKEN_BLACKLISTED)
+        self.call('[설정] 옛 비밀번호 로그인 거부', 'POST', '/login', {'username': user_id, 'password': password},
+                  expected_code=INVALID_PASSWORD)
+        token = self.call('[설정] 새 비밀번호 로그인', 'POST', '/login',
+                          {'username': user_id, 'password': new_password}).get('accessToken')
+
+        self.call('[설정] 비밀번호 틀리면 탈퇴 거부', 'DELETE', '/user/me', {'password': 'wrong'}, token=token,
+                  expected_code=INVALID_PASSWORD)
+        time.sleep(1.1)
+        self.call('[설정] 회원탈퇴', 'DELETE', '/user/me', {'password': new_password}, token=token)
+        self.call('[설정] 탈퇴 후 토큰 거부', 'GET', '/user/me', token=token, expected_code=TOKEN_BLACKLISTED)
+        self.call('[설정] 탈퇴 후 로그인 거부', 'POST', '/login', {'username': user_id, 'password': new_password},
+                  expected_code=USER_NOT_FOUND)
+        self.call('[설정] 탈퇴한 아이디 재가입 거부', 'POST', '/user/register',
+                  {'id': user_id, 'pw': password, 'name': 'again'}, expected_code=DUPLICATED)
 
     def report(self):
         for label, is_passed, code, description in self.results:

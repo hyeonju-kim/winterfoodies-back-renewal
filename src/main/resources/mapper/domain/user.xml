@@ -37,7 +37,7 @@
                  )
     </insert>
 
-    <!-- 사용자 아이디 중복 체크 -->
+    <!-- 사용자 아이디 중복 체크 (탈퇴한 아이디도 포함 - 다른 사람이 같은 아이디로 다시 가입하지 못하게) -->
     <select id="existsByUsername" parameterType="java.lang.String" resultType="boolean">
         /*
         SQL ID: com.winter.winter_back.domain.user.dao.UserDao.existsByUsername
@@ -46,7 +46,71 @@
         SELECT  COUNT(1) > 0
         FROM    tb_user
         WHERE   id = #{userId}
-          AND     use_yn = 'Y'
     </select>
+
+    <!-- 내 정보 조회 -->
+    <select id="getUser" resultType="com.winter.winter_back.domain.user.dto.UserDto">
+        /*
+        SQL ID: com.winter.winter_back.domain.user.dao.UserDao.getUser
+        SQL 명: 사용 중인 회원 정보 조회
+        */
+        SELECT  id
+             ,  name
+             ,  tel
+        FROM    tb_user
+        WHERE   id = #{userId}
+          AND   use_yn = 'Y'
+    </select>
+
+    <!-- 비밀번호 확인용 조회 -->
+    <select id="getUserPassword" resultType="java.lang.String">
+        /*
+        SQL ID: com.winter.winter_back.domain.user.dao.UserDao.getUserPassword
+        SQL 명: 사용 중인 회원의 암호화된 비밀번호 조회
+        */
+        SELECT  pw
+        FROM    tb_user
+        WHERE   id = #{userId}
+          AND   use_yn = 'Y'
+    </select>
+
+    <!-- 내 정보 수정 -->
+    <update id="modUserProfile">
+        /*
+        SQL ID: com.winter.winter_back.domain.user.dao.UserDao.modUserProfile
+        SQL 명: 이름·전화번호 수정
+        */
+        UPDATE  tb_user
+        SET     name = #{name}
+             ,  tel  = #{tel}
+        WHERE   id = #{userId}
+          AND   use_yn = 'Y'
+    </update>
+
+    <!-- 비밀번호 변경 -->
+    <update id="modUserPassword">
+        /*
+        SQL ID: com.winter.winter_back.domain.user.dao.UserDao.modUserPassword
+        SQL 명: 비밀번호 변경
+        */
+        UPDATE  tb_user
+        SET     pw = #{pw}
+        WHERE   id = #{userId}
+          AND   use_yn = 'Y'
+    </update>
+
+    <!-- 회원탈퇴 (사용 안 함 + 개인정보 삭제) -->
+    <update id="modUserWithdraw">
+        /*
+        SQL ID: com.winter.winter_back.domain.user.dao.UserDao.modUserWithdraw
+        SQL 명: 회원탈퇴 - 사용 안 함 처리, 이름·전화번호 삭제
+        */
+        UPDATE  tb_user
+        SET     use_yn = 'N'
+             ,  name   = NULL
+             ,  tel    = NULL
+        WHERE   id = #{userId}
+          AND   use_yn = 'Y'
+    </update>
 
 </mapper>
