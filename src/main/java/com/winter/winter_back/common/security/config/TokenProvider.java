@@ -305,10 +305,14 @@ public class TokenProvider {
         Claims claims = parseClaims(accessToken);
         log.info("[getAuthentication] claims: {}", claims);
 
-        String authoritiesString = claims.get(authKey).toString();
+        // 권한이 없는 사용자는 빈 문자열로 저장되므로, 빈 값은 걸러 권한 없이 인증한다
+        Object authoritiesClaim = claims.get(authKey);
+        String authoritiesString = authoritiesClaim == null ? "" : authoritiesClaim.toString();
 
         Collection<? extends GrantedAuthority> authorities =
                 Arrays.stream(authoritiesString.split(","))
+                        .map(String::trim)
+                        .filter(StringUtils::hasText)
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 
