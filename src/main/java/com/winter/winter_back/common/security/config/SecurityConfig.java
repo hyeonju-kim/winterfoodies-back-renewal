@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -21,6 +22,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.ObjectMapper;
+
+import java.util.List;
 
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -42,6 +45,9 @@ public class SecurityConfig {
     @Value("${jwt.expire-time.refresh:1440}")
     private int refreshTokenExpireMinute;
 
+    @Value("${cors.allowed-origin-patterns}")
+    private List<String> corsAllowedOriginPatterns;
+
     @Bean
     public TokenFilter tokenFilter() {
         return new TokenFilter(exceptionWrapperUtil, objectMapper);
@@ -50,8 +56,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowCredentials(true);
-        configuration.addAllowedOriginPattern("*");
+        // 인증은 Authorization 헤더(JWT)로만 하므로 쿠키 전송(credentials)은 허용하지 않는다
+        configuration.setAllowCredentials(false);
+        configuration.setAllowedOriginPatterns(corsAllowedOriginPatterns);
         configuration.addAllowedHeader("*");
         configuration.addAllowedMethod("*");
 
@@ -91,11 +98,17 @@ public class SecurityConfig {
                         .accessDeniedHandler(authAccessDeniedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(comSecurityInfoDto.getPermitAllUrlPatterns()).permitAll() // 누구든 접근 허용
-                        .requestMatchers("/login", "/auth/login", "/auth/refresh", "/register", "/health").permitAll()
+                        // 인증 없이 허용하는 경로는 application.yml 에서 메서드별로 관리 (조회는 GET 만, 로그인·가입은 POST 만)
+                        .requestMatchers(nullToEmpty(comSecurityInfoDto.getPermitAllUrlPatterns())).permitAll()
+                        .requestMatchers(HttpMethod.GET, nullToEmpty(comSecurityInfoDto.getPermitAllGetUrlPatterns())).permitAll()
+                        .requestMatchers(HttpMethod.POST, nullToEmpty(comSecurityInfoDto.getPermitAllPostUrlPatterns())).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(tokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private static String[] nullToEmpty(String[] patterns) {
+        return patterns == null ? new String[0] : patterns;
     }
 }

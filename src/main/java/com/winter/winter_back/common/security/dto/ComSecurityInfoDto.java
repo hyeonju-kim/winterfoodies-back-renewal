@@ -12,5 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ComSecurityInfoDto {
 	private String[] staticContentsUrlPatterns; // 정적 콘텐츠에 대한 URL 패턴 배열
-	private String[] permitAllUrlPatterns; // 모든 사용자에게 허용되는 URL 패턴 배열
+	private String[] permitAllUrlPatterns; // 모든 메서드를 인증 없이 허용하는 URL 패턴 배열
+	private String[] permitAllGetUrlPatterns; // GET(조회)만 인증 없이 허용하는 URL 패턴 배열
+	private String[] permitAllPostUrlPatterns; // POST 만 인증 없이 허용하는 URL 패턴 배열 (로그인·가입 등)
 }

@@ -101,7 +101,7 @@ class SmokeTest:
         self.call('가게 랭킹(popular)', 'GET', '/stores/rankings?type=popular')
         self.call('가게 랭킹(없는 종류)', 'GET', '/stores/rankings?type=unknown', expected_code=NOT_SUPPORTED_CODE)
         self.call('메뉴 상세', 'GET', '/menu/1')
-        self.call('홈 피드', 'GET', '/home/feed?lat=37.5&lng=127.0', token=access_token)
+        self.call('홈 피드(비로그인)', 'GET', '/home/feed?lat=37.5&lng=127.0')
 
         # 찜
         self.call('찜 추가', 'POST', '/favorites', {'storeId': 1}, token=access_token)
@@ -185,6 +185,12 @@ class SmokeTest:
         self.call('로그아웃', 'POST', '/auth/logout', token=latest_token)
         self.call('로그아웃 토큰 거부', 'GET', '/user/me', token=latest_token, expected_code=TOKEN_BLACKLISTED)
         self.call('토큰 없이 인증 API', 'GET', '/cart', expected_code=UNAUTHORIZED)
+
+        # 공개 경로 축소 확인: 조회만 공개, 쓰기·내 정보는 로그인 필요
+        self.call('토큰 없이 내 정보 거부', 'GET', '/user/me', expected_code=UNAUTHORIZED)
+        self.call('토큰 없이 내 리뷰 거부', 'GET', '/reviews/my', expected_code=UNAUTHORIZED)
+        self.call('토큰 없이 리뷰 작성 거부', 'POST', '/reviews',
+                  {'storeId': 1, 'orderOrderId': 'X', 'rating': 5, 'content': 'x'}, expected_code=UNAUTHORIZED)
 
     def report(self):
         for label, is_passed, code, description in self.results:
