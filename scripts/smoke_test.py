@@ -16,6 +16,7 @@ API 스모크(회귀) 테스트 - 주요 API 를 실제 서버에 순서대로 �
   - 하나라도 실패하면 종료 코드 1
 """
 import argparse
+import base64
 import json
 from decimal import Decimal, ROUND_HALF_UP
 import sys
@@ -58,6 +59,10 @@ ORDER_NOT_FOUND = '63001001'
 OWNER_STORE_NOT_FOUND = '61001007'
 OWNER_STORE_EXISTS = '61001009'
 INVALID_STORE_CATEGORY = '61001010'
+INVALID_IMAGE_FORMAT = '42001006'
+FILE_TOO_LARGE = '42001003'
+# 1x1 PNG (사진 올리기 확인용)
+TINY_PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
 OWNER_ID, OWNER_PASSWORD = 'owner1', 'Owner1234!'      # 테스트 데이터: 1번 매장 사장님
 OTHER_OWNER_ID = 'owner2'                              # 2번 매장 사장님
 HIDDEN_NOTICE_ID = 4  # 테스트 데이터의 비공개 공지
@@ -71,11 +76,19 @@ class SmokeTest:
         self.base_url = base_url.rstrip('/')
         self.results = []
 
-    def call(self, label, method, path, body=None, token=None, expected_code=SUCCESS, check=None):
-        """API 를 호출하고 응답 code 를 기대값과 비교해 기록한다. check 가 있으면 응답 data 도 검사한다"""
+    def call(self, label, method, path, body=None, token=None, expected_code=SUCCESS, check=None, file=None):
+        """API 를 호출하고 응답 code 를 기대값과 비교해 기록한다. check 가 있으면 응답 data 도 검사한다.
+        file=(파일 이름, 내용 bytes) 이면 multipart 의 file 파트로 보낸다(사진 올리기)"""
+        content_type = 'application/json'
         data = json.dumps(body).encode('utf-8') if body is not None else None
+        if file is not None:
+            boundary = 'smoke%d' % int(time.time() * 1000)
+            content_type = 'multipart/form-data; boundary=' + boundary
+            data = (('--%s\r\nContent-Disposition: form-data; name="file"; filename="%s"\r\n'
+                     'Content-Type: application/octet-stream\r\n\r\n' % (boundary, file[0])).encode('utf-8')
+                    + file[1] + ('\r\n--%s--\r\n' % boundary).encode('utf-8'))
         request = urllib.request.Request(self.base_url + path, data=data, method=method)
-        request.add_header('Content-Type', 'application/json')
+        request.add_header('Content-Type', content_type)
         if token:
             request.add_header('Authorization', 'Bearer ' + token)
         try:
@@ -440,6 +453,8 @@ class SmokeTest:
                   {'name': store.get('name'), 'description': store.get('description'), 'phone': store.get('phone'),
                    'minOrderAmount': store.get('minOrderAmount')}, token=owner_token)
 
+        self.run_images(owner_token, customer_token)
+
         # 매출: 일별 7칸·주별 8칸·월별 6칸, 합계 = 칸 합, 인기 메뉴
         for period, size in (('DAY', 7), ('WEEK', 8), ('MONTH', 6)):
             self.call('[사장님] 매출 %s' % period, 'GET', '/owner/sales?period=%s' % period, token=owner_token,
@@ -471,6 +486,57 @@ class SmokeTest:
             self.call('[사장님] 영업시간 원래대로', 'PUT', '/owner/store/hours',
                       {'days': [h for h in hours if h.get('openTime') or h.get('isHoliday')]
                        or [dict(week[0])]}, token=owner_token)
+
+    def fetch_status(self, label, path, expected_status, expected_body=None):
+        """JSON 이 아닌 파일 조회(올린 사진): HTTP 상태와 내용을 확인해 기록한다"""
+        try:
+            with urllib.request.urlopen(self.base_url + path) as response:
+                status, content = response.status, response.read()
+        except urllib.error.HTTPError as error:
+            status, content = error.code, b''
+        is_passed = status == expected_status and (expected_body is None or content == expected_body)
+        self.results.append((label, is_passed, status, '' if is_passed else 'HTTP %s, %d bytes' % (status, len(content))))
+
+    def run_images(self, owner_token, customer_token):
+        """사진: 가게 대표 사진 올리기·바꾸기(예전 파일 삭제) / 메뉴 사진 올리기·삭제 / 형식·크기·권한 거부"""
+        store = self.call('[사진] 가게 사진 올리기', 'POST', '/owner/store/image', token=owner_token,
+                          file=('store.png', TINY_PNG),
+                          check=lambda data: None if (data.get('imageUrl') or '').startswith('/uploads/stores/1/')
+                          else 'imageUrl=%s' % data.get('imageUrl'))
+        first_url = store.get('imageUrl') or '/uploads/none'
+        self.fetch_status('[사진] 올린 사진 내려받기(로그인 없이)', first_url, 200, TINY_PNG)
+        self.call('[사진] 손님 가게 상세에 사진', 'GET', '/stores/1',
+                  check=lambda data: None if data.get('store', {}).get('imageUrl') == first_url
+                  else 'imageUrl=%s' % data.get('store', {}).get('imageUrl'))
+        second_url = self.call('[사진] 가게 사진 바꾸기', 'POST', '/owner/store/image', token=owner_token,
+                               file=('store2.png', TINY_PNG),
+                               check=lambda data: None if data.get('imageUrl') not in (None, first_url)
+                               else 'imageUrl=%s' % data.get('imageUrl')).get('imageUrl')
+        self.fetch_status('[사진] 바꾸기 전 사진 파일 삭제됨', first_url, 404)
+        self.fetch_status('[사진] 바꾼 사진 내려받기', second_url or '/uploads/none', 200, TINY_PNG)
+        self.call('[사진] 이미지 아닌 파일 거부', 'POST', '/owner/store/image', token=owner_token,
+                  file=('fake.png', b'not an image file'), expected_code=INVALID_IMAGE_FORMAT)
+        self.call('[사진] 5MB 넘는 파일 거부', 'POST', '/owner/store/image', token=owner_token,
+                  file=('big.png', TINY_PNG + b'0' * (5 * 1024 * 1024)), expected_code=FILE_TOO_LARGE)
+        self.call('[손님] 가게 사진 올리기 거부', 'POST', '/owner/store/image', token=customer_token,
+                  file=('store.png', TINY_PNG), expected_code=PERMISSION_DENIED)
+
+        menu = self.call('[사진] 메뉴 사진 올리기', 'POST', '/owner/menus/1/image', token=owner_token,
+                         file=('menu.png', TINY_PNG),
+                         check=lambda data: None if (data.get('imageUrl') or '').startswith('/uploads/menus/1/')
+                         else 'imageUrl=%s' % data.get('imageUrl'))
+        menu_url = menu.get('imageUrl') or '/uploads/none'
+        self.call('[사진] 손님 메뉴에 사진', 'GET', '/stores/1/menu',
+                  check=lambda data: None if menu_url in [m.get('imageUrl') for c in data.get('categories', [])
+                                                           for m in c.get('menus', [])] else '메뉴 사진 없음')
+        self.call('[사진] 남의 가게 메뉴 사진 거부', 'POST', '/owner/menus/3/image', token=owner_token,
+                  file=('menu.png', TINY_PNG), expected_code=MENU_NOT_FOUND)
+        self.call('[사진] 메뉴 사진 삭제', 'DELETE', '/owner/menus/1/image', token=owner_token,
+                  check=lambda data: None if data.get('imageUrl') is None else 'imageUrl=%s' % data.get('imageUrl'))
+        self.fetch_status('[사진] 삭제한 메뉴 사진 파일 삭제됨', menu_url, 404)
+        # 화면 확인용으로 메뉴 사진은 다시 올려 둔다
+        self.call('[사진] 메뉴 사진 다시 올리기', 'POST', '/owner/menus/1/image', token=owner_token,
+                  file=('menu.png', TINY_PNG))
 
     def silent_login(self, user_id, password):
         """결과에 남기지 않는 로그인 (고정 계정이 이미 있는지 확인용)"""
@@ -526,6 +592,10 @@ class SmokeTest:
                       check=lambda data: None if store_id in [s.get('id') for s in data.get('stores', [])]
                       else '검색 결과에 없음')
         self.call('[가게등록] 손님 가게 상세', 'GET', '/stores/%s' % store_id)
+        self.call('[사진] 새 가게 사진 올리기', 'POST', '/owner/store/image', token=owner_token, file=('s.png', TINY_PNG),
+                  check=lambda data: None if data.get('imageUrl') else '사진 없음')
+        self.call('[사진] 가게 사진 삭제', 'DELETE', '/owner/store/image', token=owner_token,
+                  check=lambda data: None if data.get('imageUrl') is None else 'imageUrl=%s' % data.get('imageUrl'))
         self.call('[가게등록] 두 번째 가게 등록 거부', 'POST', '/owner/store', store_body, token=owner_token,
                   expected_code=OWNER_STORE_EXISTS)
 

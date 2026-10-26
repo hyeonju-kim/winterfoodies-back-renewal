@@ -421,7 +421,7 @@
 ## 2026-10-26 17:41 master 병합 (PR #2, be4b62c)
 - PR #1(백엔드 정리, 14:59 병합) 이후 `refactor/backend-cleanup` 에 쌓인 9개 커밋(포장 주문·검증 강화·공지·환경설정·사장님 API·검색·매출)을 PR #2 로 master 에 병합. 충돌 없음. 이제 GitHub 기본 브랜치(master)에서 최신 백엔드가 보임
 
-## 2026-10-26 17:54 가게 별점 불일치 수정 (미커밋)
+## 2026-10-26 17:54 가게 별점 불일치 수정 (커밋 27cf413)
 
 ### 원인
 - 가게 목록·홈·랭킹은 `tb_store_stats`(평균 별점·리뷰 수·주문 수)를 읽는데, 이 표를 갱신하는 코드가 어디에도 없어 테스트 데이터의 임시 숫자(4.5점·리뷰 10개 등)가 그대로 노출됨. 상세 화면은 리뷰 표에서 바로 계산(`/reviews/store/{id}/stats`)하므로 두 화면 별점이 달랐음
@@ -435,7 +435,7 @@
 - 스모크 테스트 152 → **153/153** (리뷰 작성 뒤 목록 별점·리뷰 수 = 상세 통계)
 - DB 확인: 1번 가게 통계 37개·4.97점·픽업완료 33건 = 실제 리뷰·주문 계산값과 일치
 
-## 2026-10-26 18:00 사장님 가입·가게 등록 API (미커밋)
+## 2026-10-26 18:00 사장님 가입·가게 등록 API (커밋 27cf413)
 
 ### 구현
 - **사장님으로 가입**: `POST /user/register` 에 `isOwner`(true 면 사장님) 추가. 권한 할당 쿼리(`regUserAuthMap`)를 권한 ID를 받도록 바꿔 손님 `ROLE_USER` / 사장님 `ROLE_OWNER` 중 하나 할당 (`BaseConstant.ROLE_OWNER` 추가). 가입 직후 사장님은 가게 없음 → `/user/me` 의 `storeId` null, 사장님 API 는 `owner_store_not_found`(61001007)
@@ -450,3 +450,23 @@
 - 스모크 테스트 153 → **166/166**: 손님 가입은 사장님 아님 / 사장님 가입 → 가게 없음 상태 / 손님의 가게 등록 거부 / 없는 간식 종류·위치 누락·국외 위치 거부 / 가게 등록(영업 종료·기본 영업시간 7일·"타코야키" 검색 노출) / 두 번째 등록 거부
   - 실제 등록은 고정 계정 `smoke_store_owner` 로 **한 번만** 하고 이후 실행에선 중복 거부만 확인 → 매번 테스트 가게가 손님 목록에 쌓이지 않음 (로컬 DB에 "등록 테스트 가게" 1개 생성됨)
   - 테스트 보정: 새로 등록한 가게는 사진이 없어 목록 사진 검사는 테스트 데이터 매장(1~8번)만, 별점 비교는 DB ROUND 와 같은 사사오입
+
+## 2026-10-26 18:13 PR #3 master 병합
+- 27cf413(사장님 가입·가게 등록, 가게 별점 통계 실시간 반영)을 PR #3 으로 master 에 병합 → 병합 커밋 2ef5701. master = refactor/backend-cleanup + 병합 커밋
+
+## 2026-10-26 18:33 메뉴·가게 사진 올리기 API (미커밋)
+
+### 구현
+- **저장 위치 = 레포 안 `uploads/`** (`app.upload.dir: ${UPLOAD_DIR:uploads}`, start_server.cmd 가 레포 루트에서 실행 → `01_winter_back/uploads`, `.gitignore` 에 `/uploads/` 추가 - .gitignore 는 로컬만). 가게 `uploads/stores/{가게ID}/`, 메뉴 `uploads/menus/{가게ID}/`
+- `common/file/ImageStorage`: 저장 폴더를 감싼 클래스 (배포 때 클라우드 저장소로 바꿀 때 이 클래스만 교체)
+  - 형식 확인은 확장자가 아니라 **파일 앞부분(매직 넘버)**: jpg(FF D8 FF) / png(89 50 4E 47) / webp(RIFF…WEBP), 그 밖은 `invalid_image_format`(42001006)
+  - 파일 이름은 UUID 로 새로 만듦(사용자 파일 이름 안 씀), 폴더 밖 경로 차단(normalize + startsWith)
+  - DB 에는 **서버 주소를 뺀 경로**(`/uploads/stores/1/xxx.png`) 저장 → 서버 주소가 바뀌어도 DB 수정 불필요
+  - 트랜잭션 연동: 새 파일은 롤백되면 삭제, 예전 파일은 **커밋된 뒤에** 삭제(TransactionSynchronization) → DB 와 파일이 어긋나지 않음
+- 크기 제한: `spring.servlet.multipart` 파일 5MB / 요청 6MB (넘으면 42001003)
+- 사진 제공: `WebConfig.addResourceHandlers` 로 `/uploads/**` → 저장 폴더, 보안 필터 제외(`static-contents-url-patterns`) → 로그인 없이 조회
+- 사장님 API: `POST/DELETE /owner/store/image`(가게 대표 사진 1장 - 바꿀 때 기존 행·파일 삭제 후 새로 등록), `POST/DELETE /owner/menus/{id}/image`(내 가게 메뉴만, 아니면 menu_not_found)
+
+### 검증
+- 스모크 테스트 166 → **183/183**: 올리기 → 로그인 없이 내려받기(내용 일치) → 손님 가게 상세·메뉴에 사진 → 바꾸면 예전 파일 404 / 이미지 아닌 파일·5MB 초과·손님 계정·남의 가게 메뉴 거부 / 메뉴·가게 사진 삭제 시 파일도 삭제
+- 두 번 돌려도 `uploads` 에 최신 사진 1장씩만 남음(예전 파일 정리 확인)

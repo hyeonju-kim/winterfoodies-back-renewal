@@ -315,6 +315,50 @@
                 'CLOSED', #{minOrderAmount}, 0, #{waitMinutes}, #{ownerId})
     </insert>
 
+    <!-- 가게 사진 주소들 -->
+    <select id="getStoreImageUrls" resultType="java.lang.String">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getStoreImageUrls
+        SQL 명: 가게 사진 주소 조회
+        */
+        SELECT image_url
+          FROM tb_store_image
+         WHERE store_id = #{storeId}
+    </select>
+
+    <!-- 가게 사진 모두 삭제 (대표 사진 1장만 쓰므로 바꿀 때 지우고 새로 넣는다) -->
+    <delete id="delStoreImages">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.delStoreImages
+        SQL 명: 가게 사진 삭제
+        */
+        DELETE FROM tb_store_image
+         WHERE store_id = #{storeId}
+    </delete>
+
+    <!-- 가게 대표 사진 등록 -->
+    <insert id="regStoreImage">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.regStoreImage
+        SQL 명: 가게 대표 사진 등록
+        */
+        INSERT INTO tb_store_image (store_id, image_url, sort_order)
+        VALUES (#{storeId}, #{imageUrl}, 0)
+    </insert>
+
+    <!-- 메뉴 사진 변경 (내 가게 메뉴만, null 이면 삭제) -->
+    <update id="modMenuImage">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.modMenuImage
+        SQL 명: 메뉴 사진 변경
+        */
+        UPDATE tb_menus
+           SET image_url = #{imageUrl}
+         WHERE id = #{menuId}
+           AND store_id = #{storeId}
+           AND is_active = 1
+    </update>
+
     <!-- 가게 간식 종류 (검색에서 한글 이름으로 찾도록) -->
     <insert id="regStoreCategory">
         /*

@@ -7,6 +7,7 @@ import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
 import com.winter.winter_back.domain.owner.dto.OwnerSalesResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -22,10 +23,19 @@ import java.util.List;
  * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보, 영업시간 추가
  * 26. 10. 26.       hj kim             매출 조회 추가
  * 26. 10. 26.       hj kim             가게 등록 추가
+ * 26. 10. 26.       hj kim             가게·메뉴 사진 올리기·삭제 추가
  */
 public interface OwnerSvc {
 
     OwnerStoreResponse getMyStore(String userId); // 내 가게 + 오늘 현황
+
+    OwnerStoreResponse modStoreImage(String userId, MultipartFile file); // 가게 대표 사진 올리기(바꾸기)
+
+    OwnerStoreResponse delStoreImage(String userId); // 가게 대표 사진 삭제
+
+    OwnerMenuResponse modMenuImage(String userId, Long menuId, MultipartFile file); // 메뉴 사진 올리기(바꾸기)
+
+    OwnerMenuResponse delMenuImage(String userId, Long menuId); // 메뉴 사진 삭제
 
     OwnerStoreResponse regStore(String userId, OwnerRequests.StoreRegisterRequest request); // 가게 등록 (사장님 한 명당 한 가게)
 
