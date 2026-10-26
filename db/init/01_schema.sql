@@ -270,9 +270,10 @@ CREATE TABLE IF NOT EXISTS tb_order (
     order_request            VARCHAR(500)  NULL     COMMENT '가게 요청사항',     -- 추정
     status                   VARCHAR(20)   NOT NULL DEFAULT 'PENDING' COMMENT '주문 상태(PENDING/CONFIRMED/PREPARING/DELIVERING/DELIVERED/CANCELLED)',
     payment_method           VARCHAR(30)   NULL     COMMENT '결제 수단',          -- 추정
+    order_type               VARCHAR(20)   NOT NULL DEFAULT 'PICKUP' COMMENT '주문 방식 (PICKUP 포장 / DELIVERY 배달)',
     delivery_address         VARCHAR(255)  NULL     COMMENT '배달 주소',
     delivery_detail_address  VARCHAR(255)  NULL     COMMENT '배달 상세 주소',
-    delivery_phone           VARCHAR(30)   NULL     COMMENT '배달 연락처',
+    delivery_phone           VARCHAR(30)   NULL     COMMENT '연락처 (포장·배달 공통)',
     delivery_request         VARCHAR(500)  NULL     COMMENT '배달 요청사항',
     created_datetime         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '주문일시',
     updated_datetime         DATETIME      NULL     ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',

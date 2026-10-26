@@ -262,3 +262,35 @@
 
 ## 2026-10-26 14:55 현재 위치 메모 (다른 PC 이어하기)
 - 백엔드는 버그 수정 0~5묶음까지 완료(4ded343), 6묶음 성능은 보류. 이후 작업은 Flutter 앱 `03_winter_app/docs/WORKLOG.md` 의 "📌 이어서 작업하기" 참고 (환경 준비·실행 순서 포함)
+
+## 2026-10-26 15:50 테스트 데이터 - 강남역 주변 매장 6곳 추가 (1b17706, push 완료)
+- 앱 홈 화면(카테고리 그리드·내 주변·인기·신규 섹션)을 카테고리별로 확인하려고 `db/test/01_test_data.sql` 에 매장 3~8 추가: 역삼 어묵포차(EOMUK) / 논현 군밤할매(GUNBAM) / 신논현 고구마굽는집(GUNGOGUMA) / 강남역 계란빵(GYERANPPANG) / 테헤란 타코야키(TAKOYAKI) / 양재 호두과자(HODUGWAJA, CLOSED - 영업 종료 표시 확인용)
+- 매장마다 사진(tb_store_image 4~9)·통계·메뉴 카테고리(3~8)·메뉴(3~10) 함께 추가
+- 사진 없는 매장 때문에 스모크 테스트 "imageUrl 누락" 실패 → 사진 추가로 해결, 스모크 53/53 통과
+- 로컬 DB 는 매장 1·2 이름도 한글(붕어빵 하우스·호떡 코너)로 UPDATE 해 둠 (스크립트 반영은 이미 되어 있음)
+- 앱 쪽에서 발견한 후속 이슈: 리뷰 작성 시 tb_store_stats 평점이 갱신되지 않아 목록(통계)과 상세(리뷰 평균) 평점이 다름 / 리뷰 목록 page 는 1부터 / 주문 이력 상태는 이벤트 이름(ORDER_PLACED 등)으로 저장됨
+
+## 2026-10-26 15:53 포장 전용 주문 전환 (주문 방식 orderType 추가, 미커밋)
+
+### 배경
+- 붕어빵·호떡 같은 길거리 간식은 배달보다 "미리 주문하고 가서 받기"가 맞음 → 서비스를 **포장(픽업) 전용 + 현장결제**로 정함 (배달은 확장용으로 남김)
+- 기존 주문 API 는 배송 주소 필수 + 매장 배달비 항상 부과라 포장 주문을 받을 수 없었음. DB 의 주소·연락처 컬럼은 원래 NULL 허용이라 막고 있던 건 코드뿐
+
+### 구현
+- `OrderType` enum 신규: PICKUP(포장) / DELIVERY(배달). 요청에 값이 없으면 PICKUP, 모르는 값이면 null → 에러
+- `OrderRequest`: `orderType` 추가, `deliveryAddress` 필수 해제(배달일 때만 서비스에서 검사), 포장 연락처 `contactPhone` 추가
+- `OrderServiceImpl.createOrder`
+  - 주문 방식 검증: 알 수 없는 값 → `invalid_order_type`(63001009), 배달인데 주소 없음 → `delivery_address_required`(63001010)
+  - 배달비: 포장이면 0, 배달이면 매장 배달비 (서버 계산 금액 저장 원칙 유지)
+  - 포장 주문은 연락처만 저장 (`delivery_phone` 컬럼을 포장·배달 공통 연락처로 사용, 주석 변경)
+- 응답: 주문 목록·상세·내부 DTO 에 `orderType` 추가 (매퍼 insert·select·resultMap 3곳)
+- DB: `tb_order.order_type VARCHAR(20) NOT NULL DEFAULT 'PICKUP'` (`db/init/01_schema.sql` 반영)
+  - 로컬 DB 는 `ALTER TABLE ... ADD COLUMN ... AFTER payment_method` 후, 주소가 있는 기존 주문 30건을 DELIVERY 로 UPDATE
+  - ⚠️ 다른 PC 는 DB 볼륨을 새로 만들면 스키마에 이미 반영돼 있음. 기존 볼륨이면 같은 ALTER 1줄 필요
+- 결제수단 값은 앱에서 `ON_SITE`(현장결제)로 보낼 예정 (서버는 문자열 그대로 저장, PG 연동은 추후)
+- 주문 상태(배달중·배달 완료 등)는 그대로 둠 → 앱에서만 포장 용어로 표시. 상태 체계 변경은 사장님 화면 작업 때
+
+### 검증
+- 스모크 테스트 53 → **58/58 통과**
+  - 기존 배달 주문 케이스는 `orderType: DELIVERY` 명시 (금액 7000·9000 그대로)
+  - 추가 5건: 포장 주문(주소 없이, 배달비 0 → 6000원) / 잘못된 주문 방식 거부 / 배달 주소 누락 거부 / 포장 주문 상세(orderType=PICKUP·배달비 0·연락처 저장) / 주문 목록 orderType 포함

@@ -21,6 +21,7 @@ import java.util.List;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
+ * 26. 10. 26.       hj kim             주문 방식(orderType: 포장/배달) 추가 - 포장은 배송 주소 없이 주문 가능
  */
 @Data
 @NoArgsConstructor
@@ -33,9 +34,15 @@ public class OrderRequest {
     @NotEmpty(message = "주문 항목은 필수입니다")
     private List<@Valid OrderItem> items;
 
-    @NotNull(message = "배송 주소는 필수입니다")
+    // 주문 방식 PICKUP(포장, 기본) / DELIVERY(배달)
+    private String orderType;
+
+    // 배달 주문일 때만 필수 (포장 주문은 비워도 된다)
     @Valid
     private DeliveryAddress deliveryAddress;
+
+    // 포장 주문 연락처 (가게가 픽업 안내할 때 사용)
+    private String contactPhone;
 
     @NotBlank(message = "결제 방법은 필수입니다")
     private String paymentMethod;

@@ -354,6 +354,14 @@ order_time_exceeded:
   code: 63001008
   desc: "주문 가능 시간이 초과되었습니다."
   status: 400
+invalid_order_type:
+  code: 63001009
+  desc: "주문 방식이 올바르지 않습니다."
+  status: 400
+delivery_address_required:
+  code: 63001010
+  desc: "배달 주문은 배송 주소가 필요합니다."
+  status: 400
 
 # 9-2. 장바구니 관련 (63002xxx)
 cart_empty:

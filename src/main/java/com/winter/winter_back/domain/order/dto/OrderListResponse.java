@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
+ * 26. 10. 26.       hj kim             주문 방식(orderType: 포장/배달) 추가
  */
 @Data
 @Builder
@@ -26,6 +27,7 @@ public class OrderListResponse {
     private String orderId;
     private String storeName;
     private String storeImage;
+    private String orderType;
     private String status;
     private String statusDescription;
     private BigDecimal totalAmount;

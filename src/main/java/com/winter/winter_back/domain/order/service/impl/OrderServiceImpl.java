@@ -64,6 +64,15 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException("restaurant_not_found");
         }
 
+        // 포장(기본)이면 배송 주소 없이 받고 배달비 0, 배달이면 배송 주소 필수
+        OrderType orderType = OrderType.from(orderRequest.getOrderType());
+        if (orderType == null) {
+            throw new BizException("invalid_order_type");
+        }
+        if (orderType == OrderType.DELIVERY && orderRequest.getDeliveryAddress() == null) {
+            throw new BizException("delivery_address_required");
+        }
+
         String orderId = generateOrderId();
 
         // 주문 항목별 단가(메뉴 가격 + 옵션 추가금) 계산
@@ -86,7 +95,9 @@ public class OrderServiceImpl implements OrderService {
             throw new BizException("minimum_order_amount");
         }
 
-        BigDecimal deliveryFee = BigDecimal.valueOf(store.getDeliveryFee() == null ? 0 : store.getDeliveryFee());
+        BigDecimal deliveryFee = orderType == OrderType.PICKUP || store.getDeliveryFee() == null
+                ? BigDecimal.ZERO
+                : BigDecimal.valueOf(store.getDeliveryFee());
         BigDecimal totalAmount = itemsAmount.add(deliveryFee);
         if (orderRequest.getTotalAmount() != null && orderRequest.getTotalAmount().compareTo(totalAmount) != 0) {
             // 화면에 보인 금액과 서버 계산이 다르면 기록만 남기고, 저장은 서버 계산 금액으로 한다
@@ -101,16 +112,21 @@ public class OrderServiceImpl implements OrderService {
                 .deliveryFee(deliveryFee)
                 .orderRequest(orderRequest.getOrderRequest())
                 .paymentMethod(orderRequest.getPaymentMethod())
+                .orderType(orderType.name())
                 .status(OrderStatus.PENDING.name())
                 .createdBy(userId)
                 .createdDatetime(LocalDateTime.now())
                 .build();
 
-        DeliveryInfoDto deliveryInfo = DeliveryInfoDto.builder()
-                .address(orderRequest.getDeliveryAddress().getAddress())
-                .detailAddress(orderRequest.getDeliveryAddress().getDetailAddress())
-                .phone(orderRequest.getDeliveryAddress().getPhone())
-                .build();
+        // 포장 주문은 연락처만 저장 (delivery_phone 컬럼을 연락처로 같이 쓴다)
+        OrderRequest.DeliveryAddress deliveryAddress = orderRequest.getDeliveryAddress();
+        DeliveryInfoDto deliveryInfo = deliveryAddress == null
+                ? DeliveryInfoDto.builder().phone(orderRequest.getContactPhone()).build()
+                : DeliveryInfoDto.builder()
+                        .address(deliveryAddress.getAddress())
+                        .detailAddress(deliveryAddress.getDetailAddress())
+                        .phone(deliveryAddress.getPhone())
+                        .build();
         orderDto.setDeliveryInfo(deliveryInfo);
 
         orderDao.insertOrder(orderDto);

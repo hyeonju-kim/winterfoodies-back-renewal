@@ -33,6 +33,8 @@ REVIEW_ALREADY_EXISTS = '64001002'
 MENU_NOT_FOUND = '62001001'
 MENU_OPTION_NOT_FOUND = '62002001'
 MINIMUM_ORDER_AMOUNT = '63001007'
+INVALID_ORDER_TYPE = '63001009'
+DELIVERY_ADDRESS_REQUIRED = '63001010'
 
 
 class SmokeTest:
@@ -134,28 +136,49 @@ class SmokeTest:
         # 클라이언트가 금액을 조작해 보내도 서버 계산 금액(팥 붕어빵 3000 x 2 + 배달비 1000 = 7000)으로 저장돼야 한다
         order = self.call('주문 생성(금액 조작 무시)', 'POST', '/orders',
                           {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 2, 'price': 1}],
-                           'deliveryAddress': delivery_address,
+                           'orderType': 'DELIVERY', 'deliveryAddress': delivery_address,
                            'paymentMethod': 'CARD', 'totalAmount': 100, 'deliveryFee': 0}, token=access_token,
                           check=lambda data: check_amount(data, 7000))
         order_id = order.get('orderId')
         # 옵션 추가금 반영: (3000 + 1000) x 2 + 배달비 1000 = 9000
         self.call('주문 생성(옵션 추가금)', 'POST', '/orders',
                   {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 2, 'options': [{'optionId': 1}]}],
-                   'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
+                   'orderType': 'DELIVERY', 'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
                   check=lambda data: check_amount(data, 9000))
         self.call('다른 매장 메뉴 주문 거부', 'POST', '/orders',
                   {'storeId': 2, 'items': [{'menuId': 1, 'quantity': 1}],
-                   'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
+                   'orderType': 'DELIVERY', 'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
                   expected_code=MENU_NOT_FOUND)
         self.call('없는 옵션 주문 거부', 'POST', '/orders',
                   {'storeId': 1, 'items': [{'menuId': 2, 'quantity': 2, 'options': [{'optionId': 1}]}],
-                   'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
+                   'orderType': 'DELIVERY', 'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
                   expected_code=MENU_OPTION_NOT_FOUND)
         self.call('최소 주문 금액 미달 거부', 'POST', '/orders',
                   {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 1}],
-                   'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
+                   'orderType': 'DELIVERY', 'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
                   expected_code=MINIMUM_ORDER_AMOUNT)
-        self.call('주문 목록', 'GET', '/orders', token=access_token)
+        # 포장 주문(기본): 배송 주소 없이 연락처만, 배달비 0 → 3000 x 2 = 6000
+        pickup_order = self.call('포장 주문 생성(주소 없이, 배달비 0)', 'POST', '/orders',
+                                 {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 2}],
+                                  'contactPhone': '01011112222', 'paymentMethod': 'ON_SITE'}, token=access_token,
+                                 check=lambda data: check_amount(data, 6000))
+        pickup_order_id = pickup_order.get('orderId')
+        self.call('잘못된 주문 방식 거부', 'POST', '/orders',
+                  {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 2}], 'orderType': 'DRONE',
+                   'paymentMethod': 'ON_SITE'}, token=access_token, expected_code=INVALID_ORDER_TYPE)
+        self.call('배달 주문 주소 누락 거부', 'POST', '/orders',
+                  {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 2}], 'orderType': 'DELIVERY',
+                   'paymentMethod': 'CARD'}, token=access_token, expected_code=DELIVERY_ADDRESS_REQUIRED)
+        if pickup_order_id:
+            self.call('포장 주문 상세(방식·배달비·연락처)', 'GET', '/orders/%s' % pickup_order_id, token=access_token,
+                      check=lambda data: None if (data.get('orderType') == 'PICKUP' and float(data.get('deliveryFee')) == 0
+                                                  and data.get('deliveryInfo', {}).get('phone') == '01011112222')
+                      else 'orderType=%s deliveryFee=%s deliveryInfo=%s' % (data.get('orderType'), data.get('deliveryFee'),
+                                                                              data.get('deliveryInfo')))
+            self.call('포장 주문 취소', 'PUT', '/orders/%s/cancel' % pickup_order_id, {'reason': 'test'}, token=access_token)
+        self.call('주문 목록', 'GET', '/orders', token=access_token,
+                  check=lambda data: None if all('orderType' in order for order in data.get('dataList', []))
+                  else 'orderType 누락')
         if order_id:
             self.call('주문 상세(저장 금액·결제수단)', 'GET', '/orders/%s' % order_id, token=access_token,
                       check=lambda data: check_amount(data, 7000) or
