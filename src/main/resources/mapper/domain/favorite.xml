@@ -204,6 +204,8 @@
         WHERE user_id = #{userId}
           AND store_id = #{storeId}
           AND use_yn = 'N'
+        ORDER BY id DESC
+        LIMIT 1
     </update>
 
 </mapper>

@@ -59,6 +59,12 @@ public class FavoriteServiceImpl implements FavoriteService {
         // 매장이 존재하는지 확인 (선택적)
         // storeDao.selectStoreById(storeId) - 필요에 따라 추가
 
+        // 해제했던 즐겨찾기가 있으면 새로 만들지 않고 되살린다 (같은 매장 행 중복 방지)
+        if (favoriteDao.restoreFavorite(userId, storeId, userId) > 0) {
+            log.info("즐겨찾기 복구 완료 - userId: {}, storeId: {}", userId, storeId);
+            return;
+        }
+
         FavoriteDto favoriteDto = new FavoriteDto();
         favoriteDto.setUserId(userId);
         favoriteDto.setStoreId(storeId);
