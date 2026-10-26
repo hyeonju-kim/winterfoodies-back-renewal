@@ -2,6 +2,7 @@ package com.winter.winter_back.domain.owner.ctrl;
 
 import com.winter.winter_back.common.dto.ListResponseDto;
 import com.winter.winter_back.common.security.dto.ComLoginUserInfoDto;
+import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
@@ -24,6 +25,7 @@ import java.util.List;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 26. 10. 26.       hj kim             최초 생성
+ * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보 수정, 영업시간 조회·수정 추가
  */
 @Slf4j
 @RestController
@@ -86,6 +88,59 @@ public class OwnerCtrl {
     @GetMapping("/menus")
     public List<OwnerMenuResponse> getMenuList(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo) {
         return ownerSvc.getMenuList(loginUserInfo.getUserId());
+    }
+
+    /**
+     * 메뉴 추가
+     */
+    @PostMapping("/menus")
+    public OwnerMenuResponse regMenu(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                     @RequestBody @Valid OwnerRequests.MenuRequest request) {
+        return ownerSvc.regMenu(loginUserInfo.getUserId(), request);
+    }
+
+    /**
+     * 메뉴 수정
+     */
+    @PutMapping("/menus/{menuId}")
+    public OwnerMenuResponse modMenu(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                     @PathVariable Long menuId,
+                                     @RequestBody @Valid OwnerRequests.MenuRequest request) {
+        return ownerSvc.modMenu(loginUserInfo.getUserId(), menuId, request);
+    }
+
+    /**
+     * 메뉴 삭제
+     */
+    @DeleteMapping("/menus/{menuId}")
+    public void delMenu(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo, @PathVariable Long menuId) {
+        ownerSvc.delMenu(loginUserInfo.getUserId(), menuId);
+    }
+
+    /**
+     * 가게 정보 수정 (이름·소개·전화·최소 주문금액)
+     */
+    @PutMapping("/store")
+    public OwnerStoreResponse modStoreInfo(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                           @RequestBody @Valid OwnerRequests.StoreInfoRequest request) {
+        return ownerSvc.modStoreInfo(loginUserInfo.getUserId(), request);
+    }
+
+    /**
+     * 영업시간 조회 (월~일)
+     */
+    @GetMapping("/store/hours")
+    public List<OwnerHoursResponse> getHours(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo) {
+        return ownerSvc.getHours(loginUserInfo.getUserId());
+    }
+
+    /**
+     * 영업시간 수정
+     */
+    @PutMapping("/store/hours")
+    public List<OwnerHoursResponse> modHours(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                             @RequestBody @Valid OwnerRequests.HoursRequest request) {
+        return ownerSvc.modHours(loginUserInfo.getUserId(), request);
     }
 
     /**

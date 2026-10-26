@@ -1,7 +1,10 @@
 package com.winter.winter_back.domain.owner.dao;
 
+import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
+import com.winter.winter_back.domain.owner.dto.OwnerRequests;
+import com.winter.winter_back.domain.owner.dto.OwnerSaveDtos;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -17,6 +20,7 @@ import java.util.List;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 26. 10. 26.       hj kim             최초 생성
+ * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보, 영업시간 추가
  */
 @Mapper
 public interface OwnerDao {
@@ -48,4 +52,22 @@ public interface OwnerDao {
     int modMenuSoldOut(@Param("storeId") Long storeId,
                        @Param("menuId") Long menuId,
                        @Param("isSoldOut") boolean isSoldOut); // 품절 켜고 끄기
+
+    OwnerMenuResponse getOwnerMenu(@Param("storeId") Long storeId, @Param("menuId") Long menuId); // 내 가게 메뉴 한 건
+
+    Long getMenuCategoryId(@Param("storeId") Long storeId, @Param("name") String name); // 카테고리 이름으로 ID
+
+    int regMenuCategory(OwnerSaveDtos.MenuCategorySave category); // 메뉴 카테고리 추가 (맨 뒤 순서)
+
+    int regMenu(OwnerSaveDtos.MenuSave menu); // 메뉴 추가 (카테고리 맨 뒤 순서)
+
+    int modMenu(OwnerSaveDtos.MenuSave menu); // 메뉴 수정 (이름·설명·가격·카테고리)
+
+    int delMenu(@Param("storeId") Long storeId, @Param("menuId") Long menuId); // 메뉴 삭제 (사용 안 함 - 지난 주문이 참조)
+
+    int modStoreInfo(@Param("storeId") Long storeId, @Param("request") OwnerRequests.StoreInfoRequest request); // 가게 정보 수정
+
+    List<OwnerHoursResponse> getStoreHours(@Param("storeId") Long storeId); // 요일별 영업시간
+
+    int mergeStoreHours(@Param("storeId") Long storeId, @Param("day") OwnerRequests.DayHours day); // 요일 영업시간 저장 (있으면 수정)
 }

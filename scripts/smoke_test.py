@@ -50,6 +50,7 @@ MENU_SOLD_OUT = '62001003'
 INVALID_ORDER_STATUS_CHANGE = '63001013'
 REJECT_REASON_REQUIRED = '63001014'
 INVALID_STORE_STATUS = '61001008'
+INVALID_BUSINESS_HOURS = '61001005'
 ORDER_NOT_FOUND = '63001001'
 OWNER_ID, OWNER_PASSWORD = 'owner1', 'Owner1234!'      # 테스트 데이터: 1번 매장 사장님
 OTHER_OWNER_ID = 'owner2'                              # 2번 매장 사장님
@@ -365,6 +366,75 @@ class SmokeTest:
         self.call('[사장님] 품절 해제', 'PATCH', '/owner/menus/1/sold-out', {'isSoldOut': False}, token=owner_token)
         self.call('[사장님] 남의 가게 메뉴 품절 거부', 'PATCH', '/owner/menus/3/sold-out', {'isSoldOut': True},
                   token=owner_token, expected_code=MENU_NOT_FOUND)
+
+        # 메뉴 추가 → 손님 메뉴에 보임 → 수정 → 삭제하면 손님 메뉴에서 사라짐
+        def public_menu_names():
+            menu = self.call('[손님] 가게 메뉴', 'GET', '/stores/1/menu')
+            return [m.get('name') for c in menu.get('categories', []) for m in c.get('menus', [])]
+
+        added = self.call('[사장님] 메뉴 추가(새 카테고리)', 'POST', '/owner/menus',
+                          {'name': '스모크 붕어빵', 'description': '테스트', 'price': 4000, 'categoryName': '스모크'},
+                          token=owner_token,
+                          check=lambda data: None if data.get('menuId') and data.get('categoryName') == '스모크'
+                          else '추가 결과=%s' % data)
+        menu_id = added.get('menuId')
+        if menu_id:
+            self.call('[손님] 추가한 메뉴가 보임', 'GET', '/stores/1/menu',
+                      check=lambda data: None if '스모크 붕어빵' in public_menu_names() else '추가한 메뉴 없음')
+            self.call('[사장님] 메뉴 수정', 'PUT', '/owner/menus/%s' % menu_id,
+                      {'name': '스모크 붕어빵2', 'price': 4500, 'categoryName': '기본'}, token=owner_token,
+                      check=lambda data: None if data.get('price') == 4500 and data.get('categoryName') == '기본'
+                      else '수정 결과=%s' % data)
+            self.call('[사장님] 가격 음수 거부', 'PUT', '/owner/menus/%s' % menu_id,
+                      {'name': 'x', 'price': -1}, token=owner_token, expected_code=INVALID_INPUT)
+            other_token = self.call('[다른 사장님] 로그인(메뉴)', 'POST', '/login',
+                                    {'username': OTHER_OWNER_ID, 'password': OWNER_PASSWORD}).get('accessToken')
+            self.call('[다른 사장님] 남의 메뉴 수정 거부', 'PUT', '/owner/menus/%s' % menu_id,
+                      {'name': 'x', 'price': 1}, token=other_token, expected_code=MENU_NOT_FOUND)
+            self.call('[사장님] 메뉴 삭제', 'DELETE', '/owner/menus/%s' % menu_id, token=owner_token)
+            self.call('[손님] 삭제한 메뉴는 안 보임', 'GET', '/stores/1/menu',
+                      check=lambda data: None if not any(name.startswith('스모크') for name in public_menu_names())
+                      else '삭제한 메뉴가 보임')
+            self.call('[손님] 메뉴 없는 카테고리는 안 보임', 'GET', '/stores/1/menu',
+                      check=lambda data: None if all(c.get('menus') for c in data.get('categories', []))
+                      else '빈 카테고리 노출')
+            self.call('[사장님] 삭제한 메뉴 다시 삭제 거부', 'DELETE', '/owner/menus/%s' % menu_id, token=owner_token,
+                      expected_code=MENU_NOT_FOUND)
+
+        # 가게 정보 수정 → 손님 가게 상세에 반영 → 원복
+        store = self.call('[사장님] 가게 정보', 'GET', '/owner/store', token=owner_token)
+        self.call('[사장님] 가게 정보 수정', 'PUT', '/owner/store',
+                  {'name': '붕어빵 하우스(수정)', 'description': '소개 수정', 'phone': '0299998888', 'minOrderAmount': 4000},
+                  token=owner_token,
+                  check=lambda data: None if data.get('minOrderAmount') == 4000 else '수정 결과=%s' % data)
+        self.call('[손님] 가게 상세에 반영', 'GET', '/stores/1',
+                  check=lambda data: None if data.get('store', {}).get('name') == '붕어빵 하우스(수정)'
+                  else 'name=%s' % data.get('store', {}).get('name'))
+        self.call('[사장님] 전화번호 형식 거부', 'PUT', '/owner/store',
+                  {'name': 'x', 'phone': '02-1234', 'minOrderAmount': 0}, token=owner_token, expected_code=INVALID_INPUT)
+        self.call('[사장님] 가게 정보 원래대로', 'PUT', '/owner/store',
+                  {'name': store.get('name'), 'description': store.get('description'), 'phone': store.get('phone'),
+                   'minOrderAmount': store.get('minOrderAmount')}, token=owner_token)
+
+        # 영업시간: 월~일 7개, 휴무가 아니면 시각 필수·같은 시각 불가·요일 중복 불가
+        hours = self.call('[사장님] 영업시간 7일', 'GET', '/owner/store/hours', token=owner_token,
+                          check=lambda data: None if isinstance(data, list) and len(data) == 7 else '7일이 아님')
+        week = [{'dayOfWeek': d, 'openTime': '10:00', 'closeTime': '22:00', 'isHoliday': d == 'SUNDAY'}
+                for d in ('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY')]
+        self.call('[사장님] 영업시간 저장(일요일 휴무)', 'PUT', '/owner/store/hours', {'days': week}, token=owner_token,
+                  check=lambda data: None if [d.get('isHoliday') for d in data] == [False] * 6 + [True]
+                  and data[6].get('openTime') is None else '저장 결과=%s' % data)
+        self.call('[사장님] 휴무 아닌데 시각 없음 거부', 'PUT', '/owner/store/hours',
+                  {'days': [{'dayOfWeek': 'MONDAY', 'isHoliday': False}]}, token=owner_token,
+                  expected_code=INVALID_BUSINESS_HOURS)
+        self.call('[사장님] 요일 중복 거부', 'PUT', '/owner/store/hours',
+                  {'days': [week[0], week[0]]}, token=owner_token, expected_code=INVALID_BUSINESS_HOURS)
+        self.call('[사장님] 시각 형식 거부', 'PUT', '/owner/store/hours',
+                  {'days': [dict(week[0], openTime='25:00')]}, token=owner_token, expected_code=INVALID_INPUT)
+        if isinstance(hours, list) and hours:
+            self.call('[사장님] 영업시간 원래대로', 'PUT', '/owner/store/hours',
+                      {'days': [h for h in hours if h.get('openTime') or h.get('isHoliday')]
+                       or [dict(week[0])]}, token=owner_token)
 
     def run_account_settings(self, user_id, password):
         """환경설정: 내 정보 수정 → 비밀번호 변경(모든 토큰 무효화) → 회원탈퇴(같은 아이디 재가입 불가)"""

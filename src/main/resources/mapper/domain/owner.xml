@@ -26,6 +26,8 @@
         */
         SELECT s.id            AS store_id
              , s.name
+             , s.description
+             , s.min_order_amount
              , s.category
              , s.address
              , s.phone
@@ -168,6 +170,7 @@
         SELECT m.id            AS menu_id
              , c.name          AS category_name
              , m.name
+             , m.description
              , m.price
              , m.image_url
              , m.is_sold_out
@@ -190,5 +193,141 @@
            AND store_id = #{storeId}
            AND is_active = 1
     </update>
+
+    <!-- 내 가게 메뉴 한 건 -->
+    <select id="getOwnerMenu" resultType="com.winter.winter_back.domain.owner.dto.OwnerMenuResponse">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getOwnerMenu
+        SQL 명: 사장님 가게 메뉴 단건
+        */
+        SELECT m.id            AS menu_id
+             , c.name          AS category_name
+             , m.name
+             , m.description
+             , m.price
+             , m.image_url
+             , m.is_sold_out
+          FROM tb_menus m
+          LEFT JOIN tb_menu_category c ON c.id = m.category_id
+         WHERE m.store_id = #{storeId}
+           AND m.id = #{menuId}
+           AND m.is_active = 1
+    </select>
+
+    <!-- 카테고리 이름으로 ID -->
+    <select id="getMenuCategoryId" resultType="java.lang.Long">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getMenuCategoryId
+        SQL 명: 메뉴 카테고리 ID 조회
+        */
+        SELECT id
+          FROM tb_menu_category
+         WHERE store_id = #{storeId}
+           AND name = #{name}
+           AND is_active = 1
+         ORDER BY id
+         LIMIT 1
+    </select>
+
+    <!-- 메뉴 카테고리 추가 (맨 뒤 순서) -->
+    <insert id="regMenuCategory" useGeneratedKeys="true" keyProperty="categoryId" keyColumn="id">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.regMenuCategory
+        SQL 명: 메뉴 카테고리 추가
+        */
+        INSERT INTO tb_menu_category (store_id, name, sort_order)
+        SELECT #{storeId}
+             , #{name}
+             , COALESCE(MAX(sort_order), 0) + 1
+          FROM tb_menu_category
+         WHERE store_id = #{storeId}
+    </insert>
+
+    <!-- 메뉴 추가 (카테고리 안에서 맨 뒤 순서) -->
+    <insert id="regMenu" useGeneratedKeys="true" keyProperty="menuId" keyColumn="id">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.regMenu
+        SQL 명: 메뉴 추가
+        */
+        INSERT INTO tb_menus (store_id, category_id, name, description, price, sort_order)
+        SELECT #{storeId}
+             , #{categoryId}
+             , #{name}
+             , #{description}
+             , #{price}
+             , COALESCE(MAX(sort_order), 0) + 1
+          FROM tb_menus
+         WHERE store_id = #{storeId}
+    </insert>
+
+    <!-- 메뉴 수정 -->
+    <update id="modMenu">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.modMenu
+        SQL 명: 메뉴 수정
+        */
+        UPDATE tb_menus
+           SET category_id = #{categoryId}
+             , name        = #{name}
+             , description = #{description}
+             , price       = #{price}
+         WHERE id = #{menuId}
+           AND store_id = #{storeId}
+           AND is_active = 1
+    </update>
+
+    <!-- 메뉴 삭제 (사용 안 함) -->
+    <update id="delMenu">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.delMenu
+        SQL 명: 메뉴 삭제(사용 안 함 처리)
+        */
+        UPDATE tb_menus
+           SET is_active = 0
+         WHERE id = #{menuId}
+           AND store_id = #{storeId}
+           AND is_active = 1
+    </update>
+
+    <!-- 가게 정보 수정 -->
+    <update id="modStoreInfo">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.modStoreInfo
+        SQL 명: 가게 이름·소개·전화·최소 주문금액 수정
+        */
+        UPDATE tb_store
+           SET name             = #{request.name}
+             , description      = #{request.description}
+             , phone            = #{request.phone}
+             , min_order_amount = #{request.minOrderAmount}
+         WHERE id = #{storeId}
+    </update>
+
+    <!-- 요일별 영업시간 -->
+    <select id="getStoreHours" resultType="com.winter.winter_back.domain.owner.dto.OwnerHoursResponse">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getStoreHours
+        SQL 명: 가게 요일별 영업시간 조회
+        */
+        SELECT day_of_week
+             , DATE_FORMAT(open_time, '%H:%i')  AS open_time
+             , DATE_FORMAT(close_time, '%H:%i') AS close_time
+             , is_holiday
+          FROM tb_store_hours
+         WHERE store_id = #{storeId}
+    </select>
+
+    <!-- 요일 영업시간 저장 (있으면 수정) -->
+    <insert id="mergeStoreHours">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.mergeStoreHours
+        SQL 명: 가게 요일 영업시간 추가·수정
+        */
+        INSERT INTO tb_store_hours (store_id, day_of_week, open_time, close_time, is_holiday)
+        VALUES (#{storeId}, #{day.dayOfWeek}, #{day.openTime}, #{day.closeTime}, #{day.isHoliday})
+        ON DUPLICATE KEY UPDATE open_time  = VALUES(open_time)
+                              , close_time = VALUES(close_time)
+                              , is_holiday = VALUES(is_holiday)
+    </insert>
 
 </mapper>

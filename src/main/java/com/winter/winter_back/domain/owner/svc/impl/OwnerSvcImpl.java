@@ -6,9 +6,11 @@ import com.winter.winter_back.domain.order.dao.OrderHistoryDao;
 import com.winter.winter_back.domain.order.dto.OrderHistoryDto;
 import com.winter.winter_back.domain.order.dto.OrderStatus;
 import com.winter.winter_back.domain.owner.dao.OwnerDao;
+import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
+import com.winter.winter_back.domain.owner.dto.OwnerSaveDtos;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
 import com.winter.winter_back.domain.owner.svc.OwnerSvc;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +18,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,6 +36,7 @@ import java.util.Set;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 26. 10. 26.       hj kim             최초 생성
+ * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보 수정, 영업시간 조회·수정 추가
  */
 @Slf4j
 @Service
@@ -39,6 +46,7 @@ public class OwnerSvcImpl implements OwnerSvc {
 
     private static final Set<String> STORE_STATUSES = Set.of("OPEN", "TEMPORARILY_CLOSED", "CLOSED");
     private static final int MAX_LIMIT = 50;
+    private static final String DEFAULT_MENU_CATEGORY = "기본";
 
     // 주문 단계는 이 순서로만 바뀐다: 접수 → 확인 → 조리 → 픽업대기 → 픽업완료, 확인 단계까지는 거절(취소) 가능
     private static final Map<OrderStatus, Set<OrderStatus>> NEXT_STATUSES = Map.of(
@@ -159,6 +167,132 @@ public class OwnerSvcImpl implements OwnerSvc {
         if (ownerDao.modMenuSoldOut(getStoreId(userId), menuId, request.getIsSoldOut()) == 0) {
             throw new BizException("menu_not_found");
         }
+    }
+
+    /**
+     * Author      : hj kim
+     * Description : 메뉴 추가. 카테고리는 이름으로 찾고 없으면 새로 만든다(비우면 "기본")
+     * Date        : 26. 10. 26.
+     */
+    @Override
+    public OwnerMenuResponse regMenu(String userId, OwnerRequests.MenuRequest request) {
+        Long storeId = getStoreId(userId);
+        OwnerSaveDtos.MenuSave menu = toMenuSave(storeId, request);
+        ownerDao.regMenu(menu);
+        return ownerDao.getOwnerMenu(storeId, menu.getMenuId());
+    }
+
+    @Override
+    public OwnerMenuResponse modMenu(String userId, Long menuId, OwnerRequests.MenuRequest request) {
+        Long storeId = getStoreId(userId);
+        OwnerSaveDtos.MenuSave menu = toMenuSave(storeId, request);
+        menu.setMenuId(menuId);
+        if (ownerDao.modMenu(menu) == 0) {
+            throw new BizException("menu_not_found");
+        }
+        return ownerDao.getOwnerMenu(storeId, menuId);
+    }
+
+    /**
+     * Author      : hj kim
+     * Description : 메뉴 삭제. 지난 주문·리뷰가 메뉴를 참조해서 지우지 않고 사용 안 함(is_active = 0)으로 숨긴다
+     * Date        : 26. 10. 26.
+     */
+    @Override
+    public void delMenu(String userId, Long menuId) {
+        if (ownerDao.delMenu(getStoreId(userId), menuId) == 0) {
+            throw new BizException("menu_not_found");
+        }
+    }
+
+    @Override
+    public OwnerStoreResponse modStoreInfo(String userId, OwnerRequests.StoreInfoRequest request) {
+        Long storeId = getStoreId(userId);
+        request.setName(request.getName().trim());
+        if (request.getPhone() != null && request.getPhone().isBlank()) {
+            request.setPhone(null);
+        }
+        ownerDao.modStoreInfo(storeId, request);
+        return ownerDao.getOwnerStore(storeId);
+    }
+
+    /**
+     * Author      : hj kim
+     * Description : 영업시간 월~일 7개. 아직 저장하지 않은 요일은 시각 없이(휴무 아님) 돌려준다
+     * Date        : 26. 10. 26.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<OwnerHoursResponse> getHours(String userId) {
+        List<OwnerHoursResponse> saved = ownerDao.getStoreHours(getStoreId(userId));
+        List<OwnerHoursResponse> week = new ArrayList<>();
+        for (DayOfWeek day : DayOfWeek.values()) {
+            OwnerHoursResponse hours = saved.stream()
+                    .filter(item -> day.name().equals(item.getDayOfWeek()))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        OwnerHoursResponse empty = new OwnerHoursResponse();
+                        empty.setDayOfWeek(day.name());
+                        empty.setIsHoliday(false);
+                        return empty;
+                    });
+            week.add(hours);
+        }
+        return week;
+    }
+
+    /**
+     * Author      : hj kim
+     * Description : 영업시간 수정. 요일은 MONDAY~SUNDAY 중복 없이, 휴무가 아니면 여는·닫는 시각 필수이고 같으면 안 된다
+     *               (닫는 시각이 여는 시각보다 이르면 자정을 넘겨 영업하는 것으로 본다). 요일마다 있으면 수정, 없으면 추가
+     * Date        : 26. 10. 26.
+     */
+    @Override
+    public List<OwnerHoursResponse> modHours(String userId, OwnerRequests.HoursRequest request) {
+        Long storeId = getStoreId(userId);
+        Set<String> seenDays = new HashSet<>();
+        for (OwnerRequests.DayHours day : request.getDays()) {
+            boolean isValidDay = Arrays.stream(DayOfWeek.values()).anyMatch(value -> value.name().equals(day.getDayOfWeek()));
+            boolean isOpenDay = !Boolean.TRUE.equals(day.getIsHoliday());
+            boolean hasValidTimes = day.getOpenTime() != null && day.getCloseTime() != null
+                    && !day.getOpenTime().equals(day.getCloseTime());
+            if (!isValidDay || !seenDays.add(day.getDayOfWeek()) || (isOpenDay && !hasValidTimes)) {
+                throw new BizException("invalid_business_hours");
+            }
+            if (!isOpenDay) {
+                day.setOpenTime(null);
+                day.setCloseTime(null);
+            }
+        }
+        for (OwnerRequests.DayHours day : request.getDays()) {
+            ownerDao.mergeStoreHours(storeId, day);
+        }
+        return getHours(userId);
+    }
+
+    private OwnerSaveDtos.MenuSave toMenuSave(Long storeId, OwnerRequests.MenuRequest request) {
+        String categoryName = request.getCategoryName() == null || request.getCategoryName().isBlank()
+                ? DEFAULT_MENU_CATEGORY
+                : request.getCategoryName().trim();
+        Long categoryId = ownerDao.getMenuCategoryId(storeId, categoryName);
+        if (categoryId == null) {
+            OwnerSaveDtos.MenuCategorySave category = OwnerSaveDtos.MenuCategorySave.builder()
+                    .storeId(storeId)
+                    .name(categoryName)
+                    .build();
+            ownerDao.regMenuCategory(category);
+            categoryId = category.getCategoryId();
+        }
+        String description = request.getDescription() == null || request.getDescription().isBlank()
+                ? null
+                : request.getDescription().trim();
+        return OwnerSaveDtos.MenuSave.builder()
+                .storeId(storeId)
+                .categoryId(categoryId)
+                .name(request.getName().trim())
+                .description(description)
+                .price(request.getPrice())
+                .build();
     }
 
     private Long getStoreId(String userId) {
