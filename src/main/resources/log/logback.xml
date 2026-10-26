@@ -27,13 +27,7 @@
         <appender-ref ref="console" />
     </root>
 
-    <!-- 좀 더 보기 좋은 MyBatis 쿼리 Log : log4jdbc -->
-    <logger name="jdbc.sqlonly" level="debug" />
-    <logger name="jdbc.sqltiming" level="debug" /> <!-- 실행된 SQL + 바인딩된 값 + 실행시간 -->
-    <logger name="jdbc.audit" level="off" />
-    <logger name="jdbc.resultset" level="off" />
-    <logger name="jdbc.resultsettable" level="debug" /> <!-- 결과 ResultSet 테이블 형식으로 출력 -->
-    <logger name="jdbc.connection" level="off" />
-    <logger name="log4jdbc.log4j2" level="off"/>
+    <!-- SQL 로그 : p6spy (실행된 SQL + 바인딩된 값 + 실행시간) -->
+    <logger name="p6spy" level="info" />
 
 </configuration>

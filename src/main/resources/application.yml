@@ -40,10 +40,10 @@ spring:
   application:
     name: winter_back
   datasource:
-    url: ${DB_URL:jdbc:log4jdbc:mariadb://localhost:3307/winter_app?allowPublicKeyRetrieval=true&useSSL=false}  # 기본값 = 로컬 도커 DB
+    url: ${DB_URL:jdbc:mariadb://localhost:3307/winter_app?allowPublicKeyRetrieval=true&useSSL=false}  # 기본값 = 로컬 도커 DB
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD}  # 필수, 로컬은 .env
-    driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+    driver-class-name: org.mariadb.jdbc.Driver
 
   ############################
   ## Spring security
@@ -66,9 +66,10 @@ spring:
       ,/stores/**
       ,/menu/**
       ,/reviews/**
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   cache:
     type: redis
 
@@ -83,3 +84,13 @@ cnf:
   url:
     auto-convert:
       excludes: /static/**,/**/download/**, **/test, /member/**, /metrics
+
+############################
+# SQL 로그 (p6spy)
+############################
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: true
+      # 기본 포맷은 접속 URL(계정·비밀번호 포함)까지 찍으므로 URL 을 뺀 포맷 사용
+      log-format: "took %(executionTime)ms | %(category) | connection %(connectionId)\n%(sql)"

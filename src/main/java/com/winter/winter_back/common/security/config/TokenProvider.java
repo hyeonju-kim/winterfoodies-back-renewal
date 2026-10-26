@@ -16,8 +16,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import javax.servlet.http.HttpServletRequest;
-import java.security.Key;
+import jakarta.servlet.http.HttpServletRequest;
+import javax.crypto.SecretKey;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 public class TokenProvider {
 
     // JWT 서명에 사용할 비밀키 (HMAC-SHA512 알고리즘용)
-    private static Key key;
+    private static SecretKey key;
 
     // JWT Claims에서 권한 정보를 저장할 키 이름
     private static String authKey;
@@ -261,21 +261,21 @@ public class TokenProvider {
 
         // Access Token 생성 - 발급시간(iat) 추가
         String accessToken = Jwts.builder()
-                .setSubject(userId)
-                .setIssuedAt(new Date(curTime)) // 발급시간 추가 (로그아웃 시 비교용)
-                .setExpiration(new Date(curTime + accessTokenExpireTime))
+                .subject(userId)
+                .issuedAt(new Date(curTime)) // 발급시간 추가 (로그아웃 시 비교용)
+                .expiration(new Date(curTime + accessTokenExpireTime))
                 .claim(authKey, authoritiesString)
                 .claim("userNm", userInfo.getUserNm())
                 .claim("tel", userInfo.getTel())
-                .signWith(key, SignatureAlgorithm.HS512)
+                .signWith(key, Jwts.SIG.HS512)
                 .compact();
 
         // Refresh Token 생성 - 발급시간(iat) 추가
         String refreshToken = Jwts.builder()
-                .setSubject(userId) // Refresh Token에도 userId 추가
-                .setIssuedAt(new Date(curTime)) // 발급시간 추가
-                .setExpiration(new Date(curTime + refreshTokenExpireTime))
-                .signWith(key, SignatureAlgorithm.HS512)
+                .subject(userId) // Refresh Token에도 userId 추가
+                .issuedAt(new Date(curTime)) // 발급시간 추가
+                .expiration(new Date(curTime + refreshTokenExpireTime))
+                .signWith(key, Jwts.SIG.HS512)
                 .compact();
 
         log.info("[makeTokenVo] JWT 토큰 생성 완료. userId: {}", userId);
@@ -347,7 +347,7 @@ public class TokenProvider {
         }
 
         try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
             return 0; // 정상 - 유효한 토큰
         } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
             return 1; // 잘못된 서명 또는 토큰 형식
@@ -372,8 +372,8 @@ public class TokenProvider {
             throw new BizException("token_not_build");
         }
         try {
-            return Jwts.parserBuilder().setSigningKey(key).build()
-                    .parseClaimsJws(accessToken).getBody();
+            return Jwts.parser().verifyWith(key).build()
+                    .parseSignedClaims(accessToken).getPayload();
         } catch (ExpiredJwtException e) {
             return e.getClaims();
         }
