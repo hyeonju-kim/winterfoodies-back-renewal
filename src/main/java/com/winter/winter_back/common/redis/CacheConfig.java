@@ -1,5 +1,6 @@
 package com.winter.winter_back.common.redis;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -29,6 +30,12 @@ import java.time.Duration;
 @EnableCaching
 public class CacheConfig {
 
+    // 로그인 토큰(TokenVo)을 저장하는 캐시. refresh 토큰이 살아 있는 동안은 남아 있어야 토큰 갱신이 가능하다
+    public static final String TOKEN_CACHE_NAME = "winter_cache";
+
+    @Value("${jwt.expire-time.refresh:1440}")
+    private long refreshTokenExpireMinute;
+
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
@@ -49,6 +56,7 @@ public class CacheConfig {
 
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(defaultConfig)
+                .withCacheConfiguration(TOKEN_CACHE_NAME, defaultConfig.entryTtl(Duration.ofMinutes(refreshTokenExpireMinute)))
                 .build();
     }
 

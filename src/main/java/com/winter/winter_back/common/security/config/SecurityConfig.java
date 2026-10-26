@@ -20,6 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import tools.jackson.databind.ObjectMapper;
 
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -30,6 +31,7 @@ public class SecurityConfig {
     private final AuthenticationEntryPointImpl authenticationEntryPointImpl;
     private final AuthAccessDeniedHandler authAccessDeniedHandler;
     private final RedisTemplate<String, String> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     @Value("${jwt.secret}")
     private String secret;
@@ -42,7 +44,7 @@ public class SecurityConfig {
 
     @Bean
     public TokenFilter tokenFilter() {
-        return new TokenFilter(exceptionWrapperUtil);
+        return new TokenFilter(exceptionWrapperUtil, objectMapper);
     }
 
     @Bean
@@ -90,7 +92,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(comSecurityInfoDto.getPermitAllUrlPatterns()).permitAll() // 누구든 접근 허용
-                        .requestMatchers("/login", "/auth/login", "/register", "/health").permitAll()
+                        .requestMatchers("/login", "/auth/login", "/auth/refresh", "/register", "/health").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(tokenFilter(), UsernamePasswordAuthenticationFilter.class);
 

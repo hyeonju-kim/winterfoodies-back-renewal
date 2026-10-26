@@ -1,6 +1,7 @@
 package com.winter.winter_back.domain.auth.service;
 
 import com.winter.winter_back.common.exception.BizException;
+import com.winter.winter_back.common.redis.CacheConfig;
 import com.winter.winter_back.common.security.config.TokenProvider;
 import com.winter.winter_back.common.security.dao.SecuritySupportDao;
 import com.winter.winter_back.common.security.dto.ComLoginUserInfoDto;
@@ -153,7 +154,7 @@ public class AuthService {
         }
 
         // 5. 캐시에서 해당 사용자의 토큰 정보 조회
-        Cache winterCache = cacheManager.getCache("winter_cache");
+        Cache winterCache = cacheManager.getCache(CacheConfig.TOKEN_CACHE_NAME);
         log.info("[refreshToken] > [winterCache] === {}", winterCache.getName());
 
         Cache.ValueWrapper valueWrapper = winterCache.get(userId);
@@ -230,7 +231,7 @@ public class AuthService {
         // 4. 캐시에 토큰 정보 저장
         // 키: 사용자 ID, 값: TokenVo 객체
         // 토큰 갱신 시 검증용으로 사용
-        Objects.requireNonNull(cacheManager.getCache("winter_cache"))
+        Objects.requireNonNull(cacheManager.getCache(CacheConfig.TOKEN_CACHE_NAME))
                 .put(userId, tokenVo);
 
         return tokenVo;
@@ -245,7 +246,7 @@ public class AuthService {
             TokenProvider.invalidateAllUserTokens(userId);
 
             // 2. 캐시에서 토큰 정보 삭제
-            Cache winterCache = cacheManager.getCache("winter_cache");
+            Cache winterCache = cacheManager.getCache(CacheConfig.TOKEN_CACHE_NAME);
             if (winterCache != null) {
                 winterCache.evict(userId);
                 log.info("[logout] 사용자 {}의 캐시 정보가 삭제되었습니다", userId);
@@ -254,7 +255,7 @@ public class AuthService {
             log.info("[logout] 사용자 {} 로그아웃 완료", userId);
         } catch (Exception e) {
             log.error("[logout] 로그아웃 처리 중 오류 발생: {}", e.getMessage());
-            throw new BizException("logout_failed");
+            throw new BizException("logout_fail");
         }
     }
 }

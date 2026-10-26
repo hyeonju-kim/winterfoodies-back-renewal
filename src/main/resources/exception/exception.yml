@@ -47,6 +47,10 @@ parameter.validation.IllegalArgumentException:
   code: 30002004
   desc: "입력값 오류입니다."
   status: 400
+param_required:
+  code: 30002005
+  desc: "필수 입력값이 없습니다."
+  status: 400
 
 # 2-3. 요청 오류 (30003xxx)
 org.springframework.web.servlet.NoHandlerFoundException:
@@ -98,6 +102,18 @@ token_wrong:
 token_blacklisted:
   code: 40001008
   desc: "블랙리스트에 있는 토큰입니다.(로그아웃)"
+  status: 401
+token_refresh_expire:
+  code: 40001009
+  desc: "리프레시 토큰이 만료되었거나 유효하지 않습니다. 다시 로그인해주세요."
+  status: 401
+token_refresh_wrong:
+  code: 40001010
+  desc: "리프레시 토큰이 일치하지 않습니다. 다시 로그인해주세요."
+  status: 401
+token_empty_auth:
+  code: 40001011
+  desc: "저장된 로그인 정보가 없습니다. 다시 로그인해주세요."
   status: 401
 
 

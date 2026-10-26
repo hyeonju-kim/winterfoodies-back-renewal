@@ -24,6 +24,9 @@ import urllib.request
 
 SUCCESS = '20000000'
 UNAUTHORIZED = '40001001'
+TOKEN_WRONG = '40001007'
+TOKEN_BLACKLISTED = '40001008'
+TOKEN_REFRESH_EXPIRE = '40001009'
 
 
 class SmokeTest:
@@ -123,12 +126,17 @@ class SmokeTest:
         self.call('찜 해제', 'DELETE', '/favorites/1', token=access_token)
         self.call('장바구니 비우기', 'DELETE', '/cart', token=access_token)
 
+        # 토큰 오류 응답
+        self.call('위조 토큰 거부', 'GET', '/user/me', token='abc.def.ghi', expected_code=TOKEN_WRONG)
+        self.call('잘못된 refresh 토큰 거부', 'POST', '/auth/refresh',
+                  {'accessToken': access_token, 'refreshToken': 'abc.def.ghi'}, expected_code=TOKEN_REFRESH_EXPIRE)
+
         # 토큰 갱신 → 로그아웃 → 로그아웃한 토큰 거부
         new_tokens = self.call('토큰 갱신', 'POST', '/auth/refresh',
                                {'accessToken': access_token, 'refreshToken': refresh_token}, token=access_token)
         latest_token = new_tokens.get('accessToken', access_token)
         self.call('로그아웃', 'POST', '/auth/logout', token=latest_token)
-        self.call('로그아웃 토큰 거부', 'GET', '/user/me', token=latest_token, expected_code=UNAUTHORIZED)
+        self.call('로그아웃 토큰 거부', 'GET', '/user/me', token=latest_token, expected_code=TOKEN_BLACKLISTED)
         self.call('토큰 없이 인증 API', 'GET', '/cart', expected_code=UNAUTHORIZED)
 
     def report(self):
