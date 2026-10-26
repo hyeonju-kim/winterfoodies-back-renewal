@@ -29,6 +29,9 @@ TOKEN_BLACKLISTED = '40001008'
 TOKEN_REFRESH_EXPIRE = '40001009'
 NOT_SUPPORTED_CODE = '30003003'
 REVIEW_ALREADY_EXISTS = '64001002'
+MENU_NOT_FOUND = '62001001'
+MENU_OPTION_NOT_FOUND = '62002001'
+MINIMUM_ORDER_AMOUNT = '63001007'
 
 
 class SmokeTest:
@@ -119,15 +122,36 @@ class SmokeTest:
         self.call('장바구니 담기', 'POST', '/cart/items',
                   {'menuId': 1, 'storeId': 1, 'quantity': 2, 'options': [{'optionId': 1}]}, token=access_token)
         self.call('장바구니 조회', 'GET', '/cart', token=access_token)
-        order = self.call('주문 생성', 'POST', '/orders',
-                          {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 2, 'price': 3000}],
-                           'deliveryAddress': {'address': '서울 강남구 1', 'detailAddress': '101',
-                                               'phone': '01011112222'},
-                           'paymentMethod': 'CARD', 'totalAmount': 7000, 'deliveryFee': 1000}, token=access_token)
+        delivery_address = {'address': '서울 강남구 1', 'detailAddress': '101', 'phone': '01011112222'}
+        # 클라이언트가 금액을 조작해 보내도 서버 계산 금액(팥 붕어빵 3000 x 2 + 배달비 1000 = 7000)으로 저장돼야 한다
+        order = self.call('주문 생성(금액 조작 무시)', 'POST', '/orders',
+                          {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 2, 'price': 1}],
+                           'deliveryAddress': delivery_address,
+                           'paymentMethod': 'CARD', 'totalAmount': 100, 'deliveryFee': 0}, token=access_token,
+                          check=lambda data: check_amount(data, 7000))
         order_id = order.get('orderId')
+        # 옵션 추가금 반영: (3000 + 1000) x 2 + 배달비 1000 = 9000
+        self.call('주문 생성(옵션 추가금)', 'POST', '/orders',
+                  {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 2, 'options': [{'optionId': 1}]}],
+                   'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
+                  check=lambda data: check_amount(data, 9000))
+        self.call('다른 매장 메뉴 주문 거부', 'POST', '/orders',
+                  {'storeId': 2, 'items': [{'menuId': 1, 'quantity': 1}],
+                   'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
+                  expected_code=MENU_NOT_FOUND)
+        self.call('없는 옵션 주문 거부', 'POST', '/orders',
+                  {'storeId': 1, 'items': [{'menuId': 2, 'quantity': 2, 'options': [{'optionId': 1}]}],
+                   'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
+                  expected_code=MENU_OPTION_NOT_FOUND)
+        self.call('최소 주문 금액 미달 거부', 'POST', '/orders',
+                  {'storeId': 1, 'items': [{'menuId': 1, 'quantity': 1}],
+                   'deliveryAddress': delivery_address, 'paymentMethod': 'CARD'}, token=access_token,
+                  expected_code=MINIMUM_ORDER_AMOUNT)
         self.call('주문 목록', 'GET', '/orders', token=access_token)
         if order_id:
-            self.call('주문 상세', 'GET', '/orders/%s' % order_id, token=access_token)
+            self.call('주문 상세(저장 금액·결제수단)', 'GET', '/orders/%s' % order_id, token=access_token,
+                      check=lambda data: check_amount(data, 7000) or
+                      (None if data.get('paymentMethod') == 'CARD' else 'paymentMethod=%s' % data.get('paymentMethod')))
             self.call('주문 추적', 'GET', '/orders/%s/tracking' % order_id, token=access_token)
 
         # 리뷰
@@ -169,6 +193,13 @@ class SmokeTest:
         passed_count = sum(1 for result in self.results if result[1])
         print('\n결과: %d / %d 통과' % (passed_count, len(self.results)))
         return passed_count == len(self.results)
+
+
+def check_amount(data, expected_amount):
+    amount = data.get('totalAmount')
+    if amount is None or float(amount) != expected_amount:
+        return 'totalAmount=%s (기대 %s)' % (amount, expected_amount)
+    return None
 
 
 def check_store_list(data):

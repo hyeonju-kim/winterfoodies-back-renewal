@@ -1,5 +1,7 @@
 package com.winter.winter_back.domain.order.dto;
 
+import java.math.BigDecimal;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,6 +24,7 @@ import lombok.NoArgsConstructor;
 public class OrderResponse {
     private String orderId;
     private String status;
+    private BigDecimal totalAmount; // 서버에서 계산한 최종 결제 금액 (메뉴 + 옵션 + 배달비)
     private String message;
     private String estimatedTime;
 }
