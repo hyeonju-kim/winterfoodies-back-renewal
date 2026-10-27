@@ -12,8 +12,10 @@ import com.winter.winter_back.domain.owner.svc.OwnerSvc;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -29,6 +31,7 @@ import java.util.List;
  * 26. 10. 26.       hj kim             메뉴 추가·수정·삭제, 가게 정보 수정, 영업시간 조회·수정 추가
  * 26. 10. 26.       hj kim             매출 조회 추가
  * 26. 10. 26.       hj kim             가게 등록 추가
+ * 26. 10. 26.       hj kim             가게·메뉴 사진 올리기·삭제 추가
  */
 @Slf4j
 @RestController
@@ -53,6 +56,42 @@ public class OwnerCtrl {
     public OwnerStoreResponse regStore(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
                                        @RequestBody @Valid OwnerRequests.StoreRegisterRequest request) {
         return ownerSvc.regStore(loginUserInfo.getUserId(), request);
+    }
+
+    /**
+     * 가게 대표 사진 올리기(바꾸기) - multipart file (jpg·png·webp, 5MB 까지)
+     */
+    @PostMapping(value = "/store/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public OwnerStoreResponse modStoreImage(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                            @RequestPart("file") MultipartFile file) {
+        return ownerSvc.modStoreImage(loginUserInfo.getUserId(), file);
+    }
+
+    /**
+     * 가게 대표 사진 삭제
+     */
+    @DeleteMapping("/store/image")
+    public OwnerStoreResponse delStoreImage(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo) {
+        return ownerSvc.delStoreImage(loginUserInfo.getUserId());
+    }
+
+    /**
+     * 메뉴 사진 올리기(바꾸기)
+     */
+    @PostMapping(value = "/menus/{menuId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public OwnerMenuResponse modMenuImage(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                          @PathVariable Long menuId,
+                                          @RequestPart("file") MultipartFile file) {
+        return ownerSvc.modMenuImage(loginUserInfo.getUserId(), menuId, file);
+    }
+
+    /**
+     * 메뉴 사진 삭제
+     */
+    @DeleteMapping("/menus/{menuId}/image")
+    public OwnerMenuResponse delMenuImage(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                          @PathVariable Long menuId) {
+        return ownerSvc.delMenuImage(loginUserInfo.getUserId(), menuId);
     }
 
     /**

@@ -2,6 +2,7 @@ package com.winter.winter_back.domain.owner.svc.impl;
 
 import com.winter.winter_back.common.dto.ListResponseDto;
 import com.winter.winter_back.common.exception.BizException;
+import com.winter.winter_back.common.file.ImageStorage;
 import com.winter.winter_back.domain.order.dao.OrderHistoryDao;
 import com.winter.winter_back.domain.order.dto.OrderHistoryDto;
 import com.winter.winter_back.domain.order.dto.OrderStatus;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -47,6 +49,7 @@ import java.util.Set;
  * 26. 10. 26.       hj kim             매출 조회(일별·주별·월별, 인기 메뉴) 추가
  * 26. 10. 26.       hj kim             픽업 완료 시 가게 통계(받아간 주문 수) 다시 계산
  * 26. 10. 26.       hj kim             가게 등록 추가
+ * 26. 10. 26.       hj kim             가게·메뉴 사진 올리기·삭제 추가
  */
 @Slf4j
 @Service
@@ -85,6 +88,7 @@ public class OwnerSvcImpl implements OwnerSvc {
     private final OwnerDao ownerDao;
     private final OrderHistoryDao orderHistoryDao;
     private final StoreDao storeDao;
+    private final ImageStorage imageStorage;
 
     @Override
     @Transactional(readOnly = true)
@@ -443,6 +447,64 @@ public class OwnerSvcImpl implements OwnerSvc {
             case "WEEK" -> start.getMonthValue() + "/" + start.getDayOfMonth() + "~";
             default -> start.getMonthValue() + "월";
         };
+    }
+
+    /**
+     * Author      : hj kim
+     * Description : 가게 대표 사진 올리기. 대표 사진 1장만 쓰므로 기존 사진(행·파일)은 지우고 새로 넣는다.
+     *               파일 삭제는 커밋 뒤에, 새 파일은 롤백되면 지운다(ImageStorage)
+     * Date        : 26. 10. 26.
+     */
+    @Override
+    public OwnerStoreResponse modStoreImage(String userId, MultipartFile file) {
+        Long storeId = getStoreId(userId);
+        String imageUrl = imageStorage.saveImage(file, "stores/" + storeId);
+        List<String> oldUrls = ownerDao.getStoreImageUrls(storeId);
+        ownerDao.delStoreImages(storeId);
+        ownerDao.regStoreImage(storeId, imageUrl);
+        oldUrls.forEach(imageStorage::deleteImage);
+        return ownerDao.getOwnerStore(storeId);
+    }
+
+    @Override
+    public OwnerStoreResponse delStoreImage(String userId) {
+        Long storeId = getStoreId(userId);
+        List<String> oldUrls = ownerDao.getStoreImageUrls(storeId);
+        ownerDao.delStoreImages(storeId);
+        oldUrls.forEach(imageStorage::deleteImage);
+        return ownerDao.getOwnerStore(storeId);
+    }
+
+    /**
+     * Author      : hj kim
+     * Description : 메뉴 사진 올리기(바꾸기). 내 가게 메뉴가 아니면 menu_not_found, 예전 사진 파일은 커밋 뒤 삭제
+     * Date        : 26. 10. 26.
+     */
+    @Override
+    public OwnerMenuResponse modMenuImage(String userId, Long menuId, MultipartFile file) {
+        Long storeId = getStoreId(userId);
+        OwnerMenuResponse menu = getOwnerMenuOrThrow(storeId, menuId);
+        String imageUrl = imageStorage.saveImage(file, "menus/" + storeId);
+        ownerDao.modMenuImage(storeId, menuId, imageUrl);
+        imageStorage.deleteImage(menu.getImageUrl());
+        return ownerDao.getOwnerMenu(storeId, menuId);
+    }
+
+    @Override
+    public OwnerMenuResponse delMenuImage(String userId, Long menuId) {
+        Long storeId = getStoreId(userId);
+        OwnerMenuResponse menu = getOwnerMenuOrThrow(storeId, menuId);
+        ownerDao.modMenuImage(storeId, menuId, null);
+        imageStorage.deleteImage(menu.getImageUrl());
+        return ownerDao.getOwnerMenu(storeId, menuId);
+    }
+
+    private OwnerMenuResponse getOwnerMenuOrThrow(Long storeId, Long menuId) {
+        OwnerMenuResponse menu = ownerDao.getOwnerMenu(storeId, menuId);
+        if (menu == null) {
+            throw new BizException("menu_not_found");
+        }
+        return menu;
     }
 
     private Long getStoreId(String userId) {

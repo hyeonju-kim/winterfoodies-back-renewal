@@ -1,7 +1,10 @@
 package com.winter.winter_back.common.config;
 
+import com.winter.winter_back.common.file.ImageStorage;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
@@ -12,9 +15,20 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 9. 15.         hj kim             최초 생성
+ * 26. 10. 26.       hj kim             올린 사진(/uploads/**) 제공 추가
  */
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
+
+    private final ImageStorage imageStorage;
+
+    // 올린 사진: /uploads/** → 사진 저장 폴더 (로그인 없이 조회, application.yml static-contents-url-patterns)
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler(ImageStorage.URL_PREFIX + "**")
+                .addResourceLocations(imageStorage.getRootDirectory().toUri().toString());
+    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
