@@ -25,6 +25,8 @@ public class ReviewResponse {
     private String images;                  // 리뷰 이미지
     private LocalDateTime createdDatetime;  // 작성일시
     private LocalDateTime modifiedDatetime; // 수정일시
+    private String replyContent;            // 사장님 답글 (없으면 null)
+    private LocalDateTime replyDatetime;    // 사장님 답글 일시
 
     // 매장 정보
     private String storeName;               // 매장명

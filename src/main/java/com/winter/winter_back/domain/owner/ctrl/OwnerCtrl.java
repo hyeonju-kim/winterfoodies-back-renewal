@@ -6,6 +6,7 @@ import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
+import com.winter.winter_back.domain.owner.dto.OwnerReviewResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerSalesResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
 import com.winter.winter_back.domain.owner.svc.OwnerSvc;
@@ -33,6 +34,7 @@ import java.util.List;
  * 26. 10. 26.       hj kim             가게 등록 추가
  * 26. 10. 26.       hj kim             가게·메뉴 사진 올리기·삭제 추가
  * 26. 10. 27.       hj kim             가게 위치·주소 변경 추가
+ * 26. 10. 28.       hj kim             리뷰 목록·답글 추가
  */
 @Slf4j
 @RestController
@@ -211,6 +213,36 @@ public class OwnerCtrl {
     public OwnerSalesResponse getSales(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
                                        @RequestParam(defaultValue = "DAY") String period) {
         return ownerSvc.getSales(loginUserInfo.getUserId(), period);
+    }
+
+    /**
+     * 내 가게 리뷰 목록 (unanswered=true 면 답글 안 단 리뷰만)
+     */
+    @GetMapping("/reviews")
+    public ListResponseDto<OwnerReviewResponse> getReviews(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                                           @RequestParam(defaultValue = "false") boolean unanswered,
+                                                           @RequestParam(defaultValue = "1") int page,
+                                                           @RequestParam(defaultValue = "20") int limit) {
+        return ownerSvc.getReviewList(loginUserInfo.getUserId(), unanswered, page, limit);
+    }
+
+    /**
+     * 리뷰 답글 등록·수정
+     */
+    @PutMapping("/reviews/{reviewId}/reply")
+    public OwnerReviewResponse modReviewReply(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                              @PathVariable Long reviewId,
+                                              @RequestBody @Valid OwnerRequests.ReviewReplyRequest request) {
+        return ownerSvc.modReviewReply(loginUserInfo.getUserId(), reviewId, request);
+    }
+
+    /**
+     * 리뷰 답글 삭제
+     */
+    @DeleteMapping("/reviews/{reviewId}/reply")
+    public OwnerReviewResponse delReviewReply(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                              @PathVariable Long reviewId) {
+        return ownerSvc.delReviewReply(loginUserInfo.getUserId(), reviewId);
     }
 
     /**

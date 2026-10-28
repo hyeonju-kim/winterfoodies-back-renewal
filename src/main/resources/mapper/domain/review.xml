@@ -16,6 +16,8 @@
         <result property="content" column="content"/>
         <result property="createdDatetime" column="created_datetime"/>
         <result property="modifiedDatetime" column="modified_datetime"/>
+        <result property="replyContent" column="reply_content"/>
+        <result property="replyDatetime" column="reply_datetime"/>
         <!-- 매장 정보 -->
         <result property="storeName" column="store_name"/>
         <result property="storeCategory" column="store_category"/>
@@ -47,6 +49,8 @@
                r.content,
                r.created_datetime,
                r.modified_datetime,
+               r.reply_content,
+               r.reply_datetime,
                s.name      as store_name,
                s.category  as store_category,
                u.name      as user_name
@@ -69,6 +73,8 @@
                r.content,
                r.created_datetime,
                r.modified_datetime,
+               r.reply_content,
+               r.reply_datetime,
                s.name      as store_name,
                s.category  as store_category,
                u.name      as user_name
@@ -105,6 +111,8 @@
                r.content,
                r.created_datetime,
                r.modified_datetime,
+               r.reply_content,
+               r.reply_datetime,
                s.name      as store_name,
                s.category  as store_category,
                u.name      as user_name

@@ -11,6 +11,7 @@ import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
+import com.winter.winter_back.domain.owner.dto.OwnerReviewResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerSalesResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerSaveDtos;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
@@ -31,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -51,6 +51,7 @@ import java.util.Set;
  * 26. 10. 26.       hj kim             가게 등록 추가
  * 26. 10. 26.       hj kim             가게·메뉴 사진 올리기·삭제 추가
  * 26. 10. 27.       hj kim             가게 위치·주소 변경 추가
+ * 26. 10. 28.       hj kim             리뷰 목록·답글 등록·수정·삭제 추가
  */
 @Slf4j
 @Service
@@ -506,6 +507,62 @@ public class OwnerSvcImpl implements OwnerSvc {
         ownerDao.modMenuImage(storeId, menuId, null);
         imageStorage.deleteImage(menu.getImageUrl());
         return ownerDao.getOwnerMenu(storeId, menuId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ListResponseDto<OwnerReviewResponse> getReviewList(String userId, boolean isUnansweredOnly, int page, int limit) {
+        Long storeId = getStoreId(userId);
+        int safeLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
+        int offset = (Math.max(page, 1) - 1) * safeLimit;
+
+        List<OwnerReviewResponse> reviews = ownerDao.getOwnerReviewList(storeId, isUnansweredOnly, offset, safeLimit);
+        reviews.forEach(this::maskUserName);
+        ListResponseDto<OwnerReviewResponse> response = new ListResponseDto<>();
+        response.setDataList(reviews);
+        response.setTotalCount(ownerDao.getOwnerReviewCount(storeId, isUnansweredOnly));
+        return response;
+    }
+
+    /**
+     * Author      : hj kim
+     * Description : 리뷰 답글 등록·수정 (리뷰 하나에 답글 하나, 다시 쓰면 덮어쓴다).
+     *               다른 가게 리뷰는 "없는 리뷰"로 응답한다
+     * Date        : 26. 10. 28.
+     */
+    @Override
+    public OwnerReviewResponse modReviewReply(String userId, Long reviewId, OwnerRequests.ReviewReplyRequest request) {
+        Long storeId = getStoreId(userId);
+        getOwnerReviewOrThrow(storeId, reviewId);
+        ownerDao.modReviewReply(storeId, reviewId, request.getContent().strip());
+        return getOwnerReviewOrThrow(storeId, reviewId);
+    }
+
+    @Override
+    public OwnerReviewResponse delReviewReply(String userId, Long reviewId) {
+        Long storeId = getStoreId(userId);
+        getOwnerReviewOrThrow(storeId, reviewId);
+        ownerDao.modReviewReply(storeId, reviewId, null);
+        return getOwnerReviewOrThrow(storeId, reviewId);
+    }
+
+    private OwnerReviewResponse getOwnerReviewOrThrow(Long storeId, Long reviewId) {
+        OwnerReviewResponse review = ownerDao.getOwnerReview(storeId, reviewId);
+        if (review == null) {
+            throw new BizException("review_not_found");
+        }
+        return maskUserName(review);
+    }
+
+    /**
+     * 사장님 화면에도 손님 이름은 첫 글자만 보인다 (예: 김현주 → 김**)
+     */
+    private OwnerReviewResponse maskUserName(OwnerReviewResponse review) {
+        String userName = review.getUserName();
+        if (userName != null && !userName.isEmpty()) {
+            review.setUserName(userName.charAt(0) + "*".repeat(Math.max(userName.length() - 1, 1)));
+        }
+        return review;
     }
 
     private OwnerMenuResponse getOwnerMenuOrThrow(Long storeId, Long menuId) {
