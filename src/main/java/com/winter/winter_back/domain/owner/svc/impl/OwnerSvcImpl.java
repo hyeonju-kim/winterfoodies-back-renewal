@@ -50,6 +50,7 @@ import java.util.Set;
  * 26. 10. 26.       hj kim             픽업 완료 시 가게 통계(받아간 주문 수) 다시 계산
  * 26. 10. 26.       hj kim             가게 등록 추가
  * 26. 10. 26.       hj kim             가게·메뉴 사진 올리기·삭제 추가
+ * 26. 10. 27.       hj kim             가게 위치·주소 변경 추가
  */
 @Slf4j
 @Service
@@ -277,6 +278,14 @@ public class OwnerSvcImpl implements OwnerSvc {
         if (ownerDao.delMenu(getStoreId(userId), menuId) == 0) {
             throw new BizException("menu_not_found");
         }
+    }
+
+    @Override
+    public OwnerStoreResponse modStoreLocation(String userId, OwnerRequests.StoreLocationRequest request) {
+        Long storeId = getStoreId(userId);
+        request.setAddress(request.getAddress().trim());
+        ownerDao.modStoreLocation(storeId, request);
+        return ownerDao.getOwnerStore(storeId);
     }
 
     @Override

@@ -17,8 +17,6 @@ public interface OrderService {
 
     OrderResponse createOrder(OrderRequest orderRequest, String userId);
 
-    OrderConfirmResponse confirmOrder(OrderConfirmRequest confirmRequest, String userId); // 주문 확인 - 호출하는 API 없음 (사장님 주문 처리는 OwnerSvc.modOrderStatus 로 대체, 정리 대상)
-
     ListResponseDto<OrderListResponse> getOrderList(String userId, int page, int limit, String status);
 
     OrderDetailResponse getOrderDetail(String orderId, String userId);

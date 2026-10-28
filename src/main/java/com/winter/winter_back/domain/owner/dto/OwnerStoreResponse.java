@@ -14,6 +14,7 @@ import java.math.BigDecimal;
  * -----------------------------------------------------------
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             가게 소개·최소 주문금액 추가 (가게 정보 수정 화면용)
+ * 26. 10. 27.       hj kim             가게 위치(위도·경도) 추가
  */
 @Data
 public class OwnerStoreResponse {
@@ -22,7 +23,9 @@ public class OwnerStoreResponse {
     private String description;          // 가게 소개
     private Integer minOrderAmount;      // 최소 주문금액
     private String category;             // 간식 종류 코드
-    private String address;              // 주소
+    private String address;              // 주소 (손님이 찾기 쉬운 위치 설명)
+    private Double latitude;             // 가게 위치 위도
+    private Double longitude;            // 가게 위치 경도
     private String phone;                // 가게 전화
     private String imageUrl;             // 대표 이미지
     private String status;               // 영업 상태 (OPEN / TEMPORARILY_CLOSED / CLOSED)

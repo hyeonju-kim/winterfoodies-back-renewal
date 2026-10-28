@@ -24,6 +24,7 @@ import java.util.List;
  * 26. 10. 26.       hj kim             매출 조회 추가
  * 26. 10. 26.       hj kim             가게 등록 추가
  * 26. 10. 26.       hj kim             가게·메뉴 사진 올리기·삭제 추가
+ * 26. 10. 27.       hj kim             가게 위치·주소 변경 추가
  */
 public interface OwnerSvc {
 
@@ -58,6 +59,8 @@ public interface OwnerSvc {
     void delMenu(String userId, Long menuId); // 메뉴 삭제
 
     OwnerStoreResponse modStoreInfo(String userId, OwnerRequests.StoreInfoRequest request); // 가게 정보 수정
+
+    OwnerStoreResponse modStoreLocation(String userId, OwnerRequests.StoreLocationRequest request); // 가게 위치·주소 변경
 
     List<OwnerHoursResponse> getHours(String userId); // 영업시간 (월~일 7개)
 

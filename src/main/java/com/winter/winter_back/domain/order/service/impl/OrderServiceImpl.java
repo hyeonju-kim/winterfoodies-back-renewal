@@ -194,35 +194,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderConfirmResponse confirmOrder(OrderConfirmRequest confirmRequest, String userId) {
-        // 주문 존재 여부 확인
-        OrderDto order = orderDao.selectOrderById(confirmRequest.getOrderId());
-        if (order == null) {
-            throw new BizException("order_not_found");
-        }
-
-        if (!order.getUserId().equals(userId)) {
-            throw new BizException("permission_denied");
-        }
-
-        // 주문 상태 업데이트
-        orderDao.updateOrderStatus(confirmRequest.getOrderId(), OrderStatus.CONFIRMED.name());
-
-        // 주문 히스토리 생성
-        createOrderHistory(confirmRequest.getOrderId(), "ORDER_CONFIRMED",
-                "주문이 확인되었습니다. 예상 시간: " + confirmRequest.getEstimatedTime(), userId);
-
-        return OrderConfirmResponse.builder()
-                .orderId(confirmRequest.getOrderId())
-                .status(OrderStatus.CONFIRMED.name())
-                .estimatedTime(confirmRequest.getEstimatedTime())
-                .message("주문이 확인되었습니다.")
-                .build();
-
-    }
-
-
-    @Override
     @Transactional(readOnly = true)
     public ListResponseDto<OrderListResponse> getOrderList(String userId, int page, int limit, String status) {
         int offset = (page - 1) * limit;

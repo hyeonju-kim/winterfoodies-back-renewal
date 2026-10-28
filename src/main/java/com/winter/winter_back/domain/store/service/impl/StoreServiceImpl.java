@@ -16,6 +16,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * description    : 매장 서비스 구현체
@@ -27,6 +29,7 @@ import java.util.List;
  * -----------------------------------------------------------
  * 25. 8. 29.        hj kim             최초 생성
  * 26. 10. 26.       hj kim             가게 메뉴에서 메뉴 없는 카테고리 제외
+ * 26. 10. 27.       hj kim             가게 메뉴를 카테고리마다 조회하던 것(N+1)을 한 번 조회 후 묶기로 변경
  */
 @Service
 @RequiredArgsConstructor
@@ -102,10 +105,12 @@ public class StoreServiceImpl implements StoreService {
         // 메뉴 카테고리 조회
         List<MenuCategoryResponse> categories = storeDao.findMenusByStore(storeId);
 
-        // 각 카테고리별 메뉴들 조회
+        // 가게 메뉴를 한 번에 가져와 카테고리별로 묶는다 (카테고리마다 조회하던 N+1 제거, 정렬은 쿼리의 sort_order 순 유지)
+        Map<Long, List<MenuDto>> menusByCategory = menuDao.findMenusByStore(storeId).stream()
+                .filter(menu -> menu.getCategoryId() != null)
+                .collect(Collectors.groupingBy(MenuDto::getCategoryId));
         for (MenuCategoryResponse category : categories) {
-            List<MenuDto> menus = menuDao.findMenusByCategory(category.getCategoryId());
-            category.setMenus(menus);
+            category.setMenus(menusByCategory.getOrDefault(category.getCategoryId(), List.of()));
         }
 
         // 사장님이 메뉴를 다 지운 카테고리는 손님 화면에 빈 제목만 남으니 뺀다

@@ -32,6 +32,7 @@ import java.util.List;
  * 26. 10. 26.       hj kim             매출 조회 추가
  * 26. 10. 26.       hj kim             가게 등록 추가
  * 26. 10. 26.       hj kim             가게·메뉴 사진 올리기·삭제 추가
+ * 26. 10. 27.       hj kim             가게 위치·주소 변경 추가
  */
 @Slf4j
 @RestController
@@ -166,6 +167,15 @@ public class OwnerCtrl {
     @DeleteMapping("/menus/{menuId}")
     public void delMenu(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo, @PathVariable Long menuId) {
         ownerSvc.delMenu(loginUserInfo.getUserId(), menuId);
+    }
+
+    /**
+     * 가게 위치·주소 변경
+     */
+    @PutMapping("/store/location")
+    public OwnerStoreResponse modStoreLocation(@AuthenticationPrincipal ComLoginUserInfoDto loginUserInfo,
+                                               @RequestBody @Valid OwnerRequests.StoreLocationRequest request) {
+        return ownerSvc.modStoreLocation(loginUserInfo.getUserId(), request);
     }
 
     /**

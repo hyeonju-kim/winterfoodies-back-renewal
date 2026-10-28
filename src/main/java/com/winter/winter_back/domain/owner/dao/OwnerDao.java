@@ -26,6 +26,7 @@ import java.util.List;
  * 26. 10. 26.       hj kim             매출(날짜별 매출·인기 메뉴·취소 수) 추가
  * 26. 10. 26.       hj kim             가게 등록 추가
  * 26. 10. 26.       hj kim             가게·메뉴 사진 추가
+ * 26. 10. 27.       hj kim             가게 위치·주소 변경 추가
  */
 @Mapper
 public interface OwnerDao {
@@ -87,6 +88,9 @@ public interface OwnerDao {
     int delMenu(@Param("storeId") Long storeId, @Param("menuId") Long menuId); // 메뉴 삭제 (사용 안 함 - 지난 주문이 참조)
 
     int modStoreInfo(@Param("storeId") Long storeId, @Param("request") OwnerRequests.StoreInfoRequest request); // 가게 정보 수정
+
+    int modStoreLocation(@Param("storeId") Long storeId,
+                         @Param("request") OwnerRequests.StoreLocationRequest request); // 가게 위치·주소 변경
 
     List<OwnerHoursResponse> getStoreHours(@Param("storeId") Long storeId); // 요일별 영업시간
 

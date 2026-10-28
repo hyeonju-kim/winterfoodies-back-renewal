@@ -1,6 +1,7 @@
 package com.winter.winter_back.domain.review.service;
 
 import com.winter.winter_back.domain.review.dto.*;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * description    :
@@ -11,6 +12,7 @@ import com.winter.winter_back.domain.review.dto.*;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 9. 2.         hj kim             최초 생성
+ * 26. 10. 27.       hj kim             리뷰 사진 올리기 추가
  */
 
 public interface ReviewService {
@@ -45,6 +47,8 @@ public interface ReviewService {
      * @param userId 사용자 ID
      * @param request 리뷰 작성 요청
      */
+    String regReviewImage(String userId, MultipartFile file); // 리뷰 사진 올리기 (경로 반환)
+
     void createReview(String userId, ReviewRequest request);
 
     /**

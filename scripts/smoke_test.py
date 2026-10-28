@@ -60,6 +60,7 @@ OWNER_STORE_NOT_FOUND = '61001007'
 OWNER_STORE_EXISTS = '61001009'
 INVALID_STORE_CATEGORY = '61001010'
 INVALID_IMAGE_FORMAT = '42001006'
+INVALID_REVIEW_IMAGES = '64001007'
 FILE_TOO_LARGE = '42001003'
 # 1x1 PNG (사진 올리기 확인용)
 TINY_PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
@@ -273,16 +274,38 @@ class SmokeTest:
         if is_delivered:
             self.call('받아간 주문 리뷰 작성 가능', 'GET', '/reviews/order/%s/writable' % review_order_id,
                       token=access_token, check=lambda data: None if data is True else '작성 가능해야 함')
-            self.call('리뷰 작성', 'POST', '/reviews',
-                      {'storeId': 1, 'orderOrderId': review_order_id, 'rating': 5, 'content': 'good'},
-                      token=access_token)
+            review_image = self.call('[리뷰사진] 사진 올리기', 'POST', '/reviews/images', token=access_token,
+                                     file=('review.png', TINY_PNG),
+                                     check=lambda data: None if (data.get('imageUrl') or '').startswith('/uploads/reviews/')
+                                     else 'imageUrl=%s' % data.get('imageUrl')).get('imageUrl') or ''
+            self.call('[리뷰사진] 남이 올린 사진 경로 거부', 'POST', '/reviews',
+                      {'storeId': 1, 'orderOrderId': review_order_id, 'rating': 5, 'content': 'good',
+                       'images': '/uploads/reviews/someone/x.png'}, token=access_token, expected_code=INVALID_REVIEW_IMAGES)
+            self.call('[리뷰사진] 4장 이상 거부', 'POST', '/reviews',
+                      {'storeId': 1, 'orderOrderId': review_order_id, 'rating': 5, 'content': 'good',
+                       'images': ','.join('/uploads/reviews/%s/%d.png' % (user_id, n) for n in range(4))}, token=access_token, expected_code=INVALID_REVIEW_IMAGES)
+            self.call('리뷰 작성(사진 1장)', 'POST', '/reviews',
+                      {'storeId': 1, 'orderOrderId': review_order_id, 'rating': 5, 'content': 'good',
+                       'images': review_image}, token=access_token)
+            self.call('[리뷰사진] 가게 리뷰에 사진', 'GET', '/reviews/store/1',
+                      check=lambda data: None if any(r.get('images') == review_image for r in data.get('dataList', []))
+                      else '리뷰 사진 없음')
+            self.fetch_status('[리뷰사진] 사진 내려받기', review_image or '/uploads/none', 200, TINY_PNG)
+            self.call('[리뷰사진] 로그인 없이 올리기 거부', 'POST', '/reviews/images', file=('r.png', TINY_PNG),
+                      expected_code=UNAUTHORIZED)
             self.call('같은 주문 리뷰 중복 거부', 'POST', '/reviews',
                       {'storeId': 1, 'orderOrderId': review_order_id, 'rating': 4, 'content': 'again'},
                       token=access_token, expected_code=REVIEW_ALREADY_EXISTS)
         self.call('가게 리뷰 목록(작성자 아이디 숨김)', 'GET', '/reviews/store/1',
                   check=lambda data: None if all(review.get('userId') is None for review in data.get('dataList', []))
                   else '공개 목록에 userId 노출')
-        self.call('내 리뷰', 'GET', '/reviews/my', token=access_token)
+        my_reviews = self.call('내 리뷰', 'GET', '/reviews/my', token=access_token)
+        if is_delivered and review_image:
+            my_review = next((r for r in my_reviews.get('dataList', []) if r.get('images') == review_image), None)
+            if my_review:
+                self.call('[리뷰사진] 사진 빼고 리뷰 수정', 'PUT', '/reviews/%s' % my_review.get('idx'),
+                          {'rating': 5, 'content': 'good', 'images': ''}, token=access_token)
+                self.fetch_status('[리뷰사진] 뺀 사진 파일 삭제됨', review_image, 404)
         review_stats = self.call('리뷰 통계', 'GET', '/reviews/store/1/stats')
         if review_stats:
             self.call('가게 목록 별점 = 상세 별점', 'GET', '/stores?lat=37.5&lng=127.0&page=0&size=20',
@@ -453,8 +476,6 @@ class SmokeTest:
                   {'name': store.get('name'), 'description': store.get('description'), 'phone': store.get('phone'),
                    'minOrderAmount': store.get('minOrderAmount')}, token=owner_token)
 
-        self.run_images(owner_token, customer_token)
-
         # 매출: 일별 7칸·주별 8칸·월별 6칸, 합계 = 칸 합, 인기 메뉴
         for period, size in (('DAY', 7), ('WEEK', 8), ('MONTH', 6)):
             self.call('[사장님] 매출 %s' % period, 'GET', '/owner/sales?period=%s' % period, token=owner_token,
@@ -497,15 +518,17 @@ class SmokeTest:
         is_passed = status == expected_status and (expected_body is None or content == expected_body)
         self.results.append((label, is_passed, status, '' if is_passed else 'HTTP %s, %d bytes' % (status, len(content))))
 
-    def run_images(self, owner_token, customer_token):
-        """사진: 가게 대표 사진 올리기·바꾸기(예전 파일 삭제) / 메뉴 사진 올리기·삭제 / 형식·크기·권한 거부"""
+    def run_images(self, owner_token, customer_token, store_id):
+        """사진: 가게 대표 사진 올리기·바꾸기(예전 파일 삭제) / 메뉴 사진 올리기·삭제 / 형식·크기·권한 거부.
+        실제 화면에 쓰는 가게 사진을 덮어쓰지 않도록 가게 사진은 스모크 전용 가게(store_id)로,
+        메뉴 사진은 1번 가게 메뉴에 올렸다가 마지막에 지운다"""
         store = self.call('[사진] 가게 사진 올리기', 'POST', '/owner/store/image', token=owner_token,
                           file=('store.png', TINY_PNG),
-                          check=lambda data: None if (data.get('imageUrl') or '').startswith('/uploads/stores/1/')
+                          check=lambda data: None if (data.get('imageUrl') or '').startswith('/uploads/stores/%s/' % store_id)
                           else 'imageUrl=%s' % data.get('imageUrl'))
         first_url = store.get('imageUrl') or '/uploads/none'
         self.fetch_status('[사진] 올린 사진 내려받기(로그인 없이)', first_url, 200, TINY_PNG)
-        self.call('[사진] 손님 가게 상세에 사진', 'GET', '/stores/1',
+        self.call('[사진] 손님 가게 상세에 사진', 'GET', '/stores/%s' % store_id,
                   check=lambda data: None if data.get('store', {}).get('imageUrl') == first_url
                   else 'imageUrl=%s' % data.get('store', {}).get('imageUrl'))
         second_url = self.call('[사진] 가게 사진 바꾸기', 'POST', '/owner/store/image', token=owner_token,
@@ -521,7 +544,8 @@ class SmokeTest:
         self.call('[손님] 가게 사진 올리기 거부', 'POST', '/owner/store/image', token=customer_token,
                   file=('store.png', TINY_PNG), expected_code=PERMISSION_DENIED)
 
-        menu = self.call('[사진] 메뉴 사진 올리기', 'POST', '/owner/menus/1/image', token=owner_token,
+        menu_owner_token = self.silent_login(OWNER_ID, OWNER_PASSWORD)
+        menu = self.call('[사진] 메뉴 사진 올리기', 'POST', '/owner/menus/1/image', token=menu_owner_token,
                          file=('menu.png', TINY_PNG),
                          check=lambda data: None if (data.get('imageUrl') or '').startswith('/uploads/menus/1/')
                          else 'imageUrl=%s' % data.get('imageUrl'))
@@ -529,14 +553,11 @@ class SmokeTest:
         self.call('[사진] 손님 메뉴에 사진', 'GET', '/stores/1/menu',
                   check=lambda data: None if menu_url in [m.get('imageUrl') for c in data.get('categories', [])
                                                            for m in c.get('menus', [])] else '메뉴 사진 없음')
-        self.call('[사진] 남의 가게 메뉴 사진 거부', 'POST', '/owner/menus/3/image', token=owner_token,
+        self.call('[사진] 남의 가게 메뉴 사진 거부', 'POST', '/owner/menus/3/image', token=menu_owner_token,
                   file=('menu.png', TINY_PNG), expected_code=MENU_NOT_FOUND)
-        self.call('[사진] 메뉴 사진 삭제', 'DELETE', '/owner/menus/1/image', token=owner_token,
+        self.call('[사진] 메뉴 사진 삭제', 'DELETE', '/owner/menus/1/image', token=menu_owner_token,
                   check=lambda data: None if data.get('imageUrl') is None else 'imageUrl=%s' % data.get('imageUrl'))
         self.fetch_status('[사진] 삭제한 메뉴 사진 파일 삭제됨', menu_url, 404)
-        # 화면 확인용으로 메뉴 사진은 다시 올려 둔다
-        self.call('[사진] 메뉴 사진 다시 올리기', 'POST', '/owner/menus/1/image', token=owner_token,
-                  file=('menu.png', TINY_PNG))
 
     def silent_login(self, user_id, password):
         """결과에 남기지 않는 로그인 (고정 계정이 이미 있는지 확인용)"""
@@ -592,10 +613,20 @@ class SmokeTest:
                       check=lambda data: None if store_id in [s.get('id') for s in data.get('stores', [])]
                       else '검색 결과에 없음')
         self.call('[가게등록] 손님 가게 상세', 'GET', '/stores/%s' % store_id)
-        self.call('[사진] 새 가게 사진 올리기', 'POST', '/owner/store/image', token=owner_token, file=('s.png', TINY_PNG),
-                  check=lambda data: None if data.get('imageUrl') else '사진 없음')
+        self.run_images(owner_token, customer_token, store_id)
         self.call('[사진] 가게 사진 삭제', 'DELETE', '/owner/store/image', token=owner_token,
                   check=lambda data: None if data.get('imageUrl') is None else 'imageUrl=%s' % data.get('imageUrl'))
+        self.call('[위치] 가게 위치·주소 변경', 'PUT', '/owner/store/location',
+                  {'address': '제주 테스트 위치 2', 'latitude': 33.26, 'longitude': 126.57}, token=owner_token,
+                  check=lambda data: None if data.get('address') == '제주 테스트 위치 2'
+                  and abs(data.get('latitude', 0) - 33.26) < 1e-6 else '변경 결과=%s' % data)
+        self.call('[위치] 손님 가게 상세에 새 위치', 'GET', '/stores/%s' % store_id,
+                  check=lambda data: None if abs((data.get('store') or {}).get('latitude', 0) - 33.26) < 1e-6
+                  else 'latitude=%s' % (data.get('store') or {}).get('latitude'))
+        self.call('[위치] 국내 밖 위치 거부', 'PUT', '/owner/store/location',
+                  {'address': 'x', 'latitude': 10.0, 'longitude': 126.57}, token=owner_token, expected_code=INVALID_INPUT)
+        self.call('[위치] 주소 비우면 거부', 'PUT', '/owner/store/location',
+                  {'address': ' ', 'latitude': 33.26, 'longitude': 126.57}, token=owner_token, expected_code=INVALID_INPUT)
         self.call('[가게등록] 두 번째 가게 등록 거부', 'POST', '/owner/store', store_body, token=owner_token,
                   expected_code=OWNER_STORE_EXISTS)
 
