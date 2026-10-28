@@ -58,6 +58,10 @@
                   FROM tb_order o
                  WHERE o.store_id = s.id
                    AND o.status IN ('CONFIRMED', 'PREPARING', 'DELIVERING')) AS in_progress_order_count
+             , (SELECT COUNT(*)
+                  FROM tb_review r
+                 WHERE r.store_id = s.id
+                   AND r.reply_content IS NULL)            AS unanswered_review_count
           FROM tb_store s
          WHERE s.id = #{storeId}
     </select>
@@ -112,6 +116,77 @@
             </foreach>
         </if>
     </sql>
+
+    <sql id="ownerReviewColumns">
+        SELECT r.idx              AS review_id
+             , r.order_order_id   AS order_id
+             , u.name             AS user_name
+             , r.rating
+             , r.content
+             , r.images
+             , (SELECT GROUP_CONCAT(CONCAT(m.name, ' x', oi.quantity) ORDER BY oi.order_item_id SEPARATOR ', ')
+                  FROM tb_order_items oi
+                  JOIN tb_menus m ON m.id = oi.menu_id
+                 WHERE oi.order_id = r.order_order_id) AS item_summary
+             , r.created_datetime
+             , r.reply_content
+             , r.reply_datetime
+          FROM tb_review r
+          LEFT JOIN tb_user u ON u.id = r.user_id
+    </sql>
+
+    <!-- 내 가게 리뷰 목록 (최신순) -->
+    <select id="getOwnerReviewList" resultType="com.winter.winter_back.domain.owner.dto.OwnerReviewResponse">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getOwnerReviewList
+        SQL 명: 사장님 가게 리뷰 목록
+        */
+        <include refid="ownerReviewColumns"/>
+         WHERE r.store_id = #{storeId}
+        <if test="isUnansweredOnly">
+           AND r.reply_content IS NULL
+        </if>
+         ORDER BY r.created_datetime DESC, r.idx DESC
+         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 내 가게 리뷰 수 -->
+    <select id="getOwnerReviewCount" resultType="int">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getOwnerReviewCount
+        SQL 명: 사장님 가게 리뷰 수
+        */
+        SELECT COUNT(*)
+          FROM tb_review r
+         WHERE r.store_id = #{storeId}
+        <if test="isUnansweredOnly">
+           AND r.reply_content IS NULL
+        </if>
+    </select>
+
+    <!-- 내 가게 리뷰 한 건 -->
+    <select id="getOwnerReview" resultType="com.winter.winter_back.domain.owner.dto.OwnerReviewResponse">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.getOwnerReview
+        SQL 명: 사장님 가게 리뷰 단건
+        */
+        <include refid="ownerReviewColumns"/>
+         WHERE r.store_id = #{storeId}
+           AND r.idx = #{reviewId}
+    </select>
+
+    <!-- 리뷰 답글 등록·수정·삭제 (content 가 null 이면 삭제) -->
+    <update id="modReviewReply">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.modReviewReply
+        SQL 명: 사장님 리뷰 답글 변경
+        */
+        UPDATE tb_review
+           SET reply_content  = #{content}
+             , reply_datetime = <choose><when test="content != null">NOW()</when><otherwise>NULL</otherwise></choose>
+         WHERE store_id = #{storeId}
+           AND idx = #{reviewId}
+    </update>
 
     <!-- 내 가게 주문 목록 (최신순) -->
     <select id="getOwnerOrderList" resultType="com.winter.winter_back.domain.owner.dto.OwnerOrderResponse">

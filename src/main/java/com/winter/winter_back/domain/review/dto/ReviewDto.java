@@ -28,6 +28,8 @@ public class ReviewDto extends BaseDto {
     private String content;                 // tb_review.content
     private LocalDateTime createdDatetime;  // tb_review.created_datetime
     private LocalDateTime modifiedDatetime; // tb_review.modified_datetime
+    private String replyContent;            // tb_review.reply_content (사장님 답글)
+    private LocalDateTime replyDatetime;    // tb_review.reply_datetime
 
     // 조인용 매장 정보
     private String storeName;               // tb_store.name

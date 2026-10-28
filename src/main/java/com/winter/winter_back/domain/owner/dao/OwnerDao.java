@@ -4,6 +4,7 @@ import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
+import com.winter.winter_back.domain.owner.dto.OwnerReviewResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerSalesResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerSaveDtos;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
@@ -91,6 +92,20 @@ public interface OwnerDao {
 
     int modStoreLocation(@Param("storeId") Long storeId,
                          @Param("request") OwnerRequests.StoreLocationRequest request); // 가게 위치·주소 변경
+
+    List<OwnerReviewResponse> getOwnerReviewList(@Param("storeId") Long storeId,
+                                                 @Param("isUnansweredOnly") boolean isUnansweredOnly,
+                                                 @Param("offset") int offset,
+                                                 @Param("limit") int limit); // 내 가게 리뷰 목록 (최신순)
+
+    int getOwnerReviewCount(@Param("storeId") Long storeId,
+                            @Param("isUnansweredOnly") boolean isUnansweredOnly); // 내 가게 리뷰 수
+
+    OwnerReviewResponse getOwnerReview(@Param("storeId") Long storeId, @Param("reviewId") Long reviewId); // 내 가게 리뷰 한 건
+
+    int modReviewReply(@Param("storeId") Long storeId,
+                       @Param("reviewId") Long reviewId,
+                       @Param("content") String content); // 답글 등록·수정 (null 이면 삭제)
 
     List<OwnerHoursResponse> getStoreHours(@Param("storeId") Long storeId); // 요일별 영업시간
 

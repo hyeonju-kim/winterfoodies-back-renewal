@@ -61,6 +61,7 @@ OWNER_STORE_EXISTS = '61001009'
 INVALID_STORE_CATEGORY = '61001010'
 INVALID_IMAGE_FORMAT = '42001006'
 INVALID_REVIEW_IMAGES = '64001007'
+REVIEW_NOT_FOUND = '64001001'
 FILE_TOO_LARGE = '42001003'
 # 1x1 PNG (사진 올리기 확인용)
 TINY_PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
@@ -303,9 +304,17 @@ class SmokeTest:
         if is_delivered and review_image:
             my_review = next((r for r in my_reviews.get('dataList', []) if r.get('images') == review_image), None)
             if my_review:
-                self.call('[리뷰사진] 사진 빼고 리뷰 수정', 'PUT', '/reviews/%s' % my_review.get('idx'),
+                review_id = my_review.get('idx')
+                self.run_review_reply(owner_token, access_token, review_id)
+                self.call('[리뷰사진] 사진 빼고 리뷰 수정', 'PUT', '/reviews/%s' % review_id,
                           {'rating': 5, 'content': 'good', 'images': ''}, token=access_token)
                 self.fetch_status('[리뷰사진] 뺀 사진 파일 삭제됨', review_image, 404)
+                self.call('[답글] 손님이 리뷰를 고쳐도 답글 유지', 'GET', '/reviews/%s' % review_id,
+                          check=lambda data: None if data.get('replyContent') == '또 오세요'
+                          else 'replyContent=%s' % data.get('replyContent'))
+                self.call('[답글] 삭제', 'DELETE', '/owner/reviews/%s/reply' % review_id, token=owner_token,
+                          check=lambda data: None if data.get('replyContent') is None and data.get('replyDatetime') is None
+                          else 'replyContent=%s' % data.get('replyContent'))
         review_stats = self.call('리뷰 통계', 'GET', '/reviews/store/1/stats')
         if review_stats:
             self.call('가게 목록 별점 = 상세 별점', 'GET', '/stores?lat=37.5&lng=127.0&page=0&size=20',
@@ -366,6 +375,43 @@ class SmokeTest:
 
         self.run_account_settings(user_id + 's', password)
         self.run_store_registration(user_id + 'o', password)
+
+    def run_review_reply(self, owner_token, customer_token, review_id):
+        """사장님 리뷰 답글: 답글 안 단 리뷰 목록·현황 수, 등록·수정, 손님 화면 표시, 입력·권한 거부"""
+        def has_review(data):
+            return any(review.get('reviewId') == review_id for review in data.get('dataList', []))
+
+        self.call('[답글] 답글 안 단 리뷰 목록에 있음(이름 가림)', 'GET', '/owner/reviews?unanswered=true', token=owner_token,
+                  check=lambda data: None if has_review(data) and all('*' in (r.get('userName') or '*')
+                                                                      for r in data.get('dataList', []))
+                  else '리뷰 없음 또는 이름 노출')
+        self.call('[답글] 가게 현황에 답글 안 단 리뷰 수', 'GET', '/owner/store', token=owner_token,
+                  check=lambda data: None if (data.get('unansweredReviewCount') or 0) >= 1
+                  else 'unansweredReviewCount=%s' % data.get('unansweredReviewCount'))
+        self.call('[답글] 빈 답글 거부', 'PUT', '/owner/reviews/%s/reply' % review_id, {'content': '   '},
+                  token=owner_token, expected_code=INVALID_INPUT)
+        self.call('[답글] 500자 넘으면 거부', 'PUT', '/owner/reviews/%s/reply' % review_id, {'content': 'a' * 501},
+                  token=owner_token, expected_code=INVALID_INPUT)
+        self.call('[답글] 손님은 거부', 'PUT', '/owner/reviews/%s/reply' % review_id, {'content': 'x'},
+                  token=customer_token, expected_code=PERMISSION_DENIED)
+        other_token = self.silent_login(OTHER_OWNER_ID, OWNER_PASSWORD)
+        self.call('[답글] 다른 가게 리뷰 거부', 'PUT', '/owner/reviews/%s/reply' % review_id, {'content': 'x'},
+                  token=other_token, expected_code=REVIEW_NOT_FOUND)
+        self.call('[답글] 등록(앞뒤 공백 정리)', 'PUT', '/owner/reviews/%s/reply' % review_id, {'content': '  감사합니다  '},
+                  token=owner_token,
+                  check=lambda data: None if data.get('replyContent') == '감사합니다' and data.get('replyDatetime')
+                  else 'replyContent=%s' % data.get('replyContent'))
+        self.call('[답글] 손님 가게 리뷰에 답글 표시', 'GET', '/reviews/store/1',
+                  check=lambda data: None if any(r.get('idx') == review_id and r.get('replyContent') == '감사합니다'
+                                                 for r in data.get('dataList', []))
+                  else '답글 없음')
+        self.call('[답글] 답글 단 리뷰는 미답글 목록에서 빠짐', 'GET', '/owner/reviews?unanswered=true&limit=50',
+                  token=owner_token, check=lambda data: '아직 있음' if has_review(data) else None)
+        self.call('[답글] 전체 목록에는 있음', 'GET', '/owner/reviews', token=owner_token,
+                  check=lambda data: None if has_review(data) else '리뷰 없음')
+        self.call('[답글] 수정', 'PUT', '/owner/reviews/%s/reply' % review_id, {'content': '또 오세요'}, token=owner_token,
+                  check=lambda data: None if data.get('replyContent') == '또 오세요'
+                  else 'replyContent=%s' % data.get('replyContent'))
 
     def run_owner(self, owner_token, customer_token, pickup_body):
         """사장님: 권한·내 가게·대기시간·영업 상태·주문 거절·순서 위반·다른 가게 주문·품절"""

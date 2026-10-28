@@ -34,4 +34,5 @@ public class OwnerStoreResponse {
     private BigDecimal todaySales;       // 오늘 매출 (받아간 주문 합계)
     private Integer newOrderCount;       // 새 주문 (접수 대기)
     private Integer inProgressOrderCount; // 처리 중 (확인·조리·픽업대기)
+    private Integer unansweredReviewCount; // 답글 안 단 리뷰 수
 }

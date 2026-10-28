@@ -286,6 +286,8 @@ public class ReviewServiceImpl implements ReviewService {
         response.setImages(dto.getImages());
         response.setCreatedDatetime(dto.getCreatedDatetime());
         response.setModifiedDatetime(dto.getModifiedDatetime());
+        response.setReplyContent(dto.getReplyContent());
+        response.setReplyDatetime(dto.getReplyDatetime());
         response.setStoreName(dto.getStoreName());
         response.setStoreCategory(dto.getStoreCategory());
         response.setStoreImageUrl(dto.getStoreImageUrl());

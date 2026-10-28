@@ -26,6 +26,7 @@ import java.util.List;
  * 26. 10. 26.       hj kim             메뉴 추가·수정, 가게 정보, 영업시간 요청 추가
  * 26. 10. 26.       hj kim             가게 등록 요청 추가
  * 26. 10. 27.       hj kim             가게 위치·주소 변경 요청 추가
+ * 26. 10. 28.       hj kim             리뷰 답글 요청 추가
  */
 public final class OwnerRequests {
 
@@ -172,6 +173,14 @@ public final class OwnerRequests {
 
         @NotNull(message = "휴무 여부를 입력해주세요")
         private Boolean isHoliday;
+    }
+
+    /** 리뷰 답글 등록·수정 */
+    @Data
+    public static class ReviewReplyRequest {
+        @NotBlank(message = "답글 내용을 입력해주세요")
+        @Size(max = 500, message = "답글은 500자까지 입력할 수 있습니다")
+        private String content;
     }
 
     /** 메뉴 품절 켜고 끄기 */

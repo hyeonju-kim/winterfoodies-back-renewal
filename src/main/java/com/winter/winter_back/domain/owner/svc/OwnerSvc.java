@@ -5,6 +5,7 @@ import com.winter.winter_back.domain.owner.dto.OwnerHoursResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerMenuResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerOrderResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerRequests;
+import com.winter.winter_back.domain.owner.dto.OwnerReviewResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerSalesResponse;
 import com.winter.winter_back.domain.owner.dto.OwnerStoreResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -67,4 +68,10 @@ public interface OwnerSvc {
     List<OwnerHoursResponse> modHours(String userId, OwnerRequests.HoursRequest request); // 영업시간 수정
 
     OwnerSalesResponse getSales(String userId, String period); // 매출 (DAY 7일 / WEEK 8주 / MONTH 6개월)
+
+    ListResponseDto<OwnerReviewResponse> getReviewList(String userId, boolean isUnansweredOnly, int page, int limit); // 리뷰 목록
+
+    OwnerReviewResponse modReviewReply(String userId, Long reviewId, OwnerRequests.ReviewReplyRequest request); // 답글 등록·수정
+
+    OwnerReviewResponse delReviewReply(String userId, Long reviewId); // 답글 삭제
 }

@@ -321,6 +321,8 @@ CREATE TABLE IF NOT EXISTS tb_review (
     content            TEXT          NULL     COMMENT '리뷰 내용',
     created_datetime   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '작성일시',
     modified_datetime  DATETIME      NULL     COMMENT '수정일시',
+    reply_content      VARCHAR(500)  NULL     COMMENT '사장님 답글',
+    reply_datetime     DATETIME      NULL     COMMENT '사장님 답글 작성(수정)일시',
     PRIMARY KEY (idx),
     KEY idx_review_store (store_id, created_datetime),
     KEY idx_review_user (user_id, created_datetime),
