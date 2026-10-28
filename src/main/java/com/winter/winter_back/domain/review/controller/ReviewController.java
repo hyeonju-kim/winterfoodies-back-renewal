@@ -5,8 +5,10 @@ import com.winter.winter_back.domain.review.dto.*;
 import com.winter.winter_back.domain.review.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 
@@ -19,6 +21,7 @@ import jakarta.validation.Valid;
  * DATE              AUTHOR             NOTE
  * -----------------------------------------------------------
  * 25. 9. 2.         hj kim             최초 생성
+ * 26. 10. 27.       hj kim             리뷰 사진 올리기 추가
  */
 
 @Slf4j
@@ -69,6 +72,16 @@ public class ReviewController {
         log.info("리뷰 상세 조회 - reviewId: {}", reviewId);
 
         return reviewService.getReview(reviewId);
+    }
+
+    /**
+     * 리뷰 사진 올리기 (한 장씩, 돌려받은 경로를 리뷰 작성 images 에 쉼표로 이어 보낸다)
+     * POST /reviews/images
+     */
+    @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ReviewImageResponse regReviewImage(@AuthenticationPrincipal ComLoginUserInfoDto loginUser,
+                                              @RequestPart("file") MultipartFile file) {
+        return new ReviewImageResponse(reviewService.regReviewImage(loginUser.getUserId(), file));
     }
 
     /**

@@ -30,6 +30,8 @@
              , s.min_order_amount
              , s.category
              , s.address
+             , s.latitude
+             , s.longitude
              , s.phone
              , (SELECT i.image_url
                   FROM tb_store_image i
@@ -368,6 +370,19 @@
         INSERT INTO tb_store_category (store_id, category_code, category_name)
         VALUES (#{storeId}, #{categoryCode}, #{categoryName})
     </insert>
+
+    <!-- 가게 위치·주소 변경 (노점은 자리를 옮기는 경우가 많다) -->
+    <update id="modStoreLocation">
+        /*
+        SQL ID: com.winter.winter_back.domain.owner.dao.OwnerDao.modStoreLocation
+        SQL 명: 가게 위치·주소 변경
+        */
+        UPDATE tb_store
+           SET address   = #{request.address}
+             , latitude  = #{request.latitude}
+             , longitude = #{request.longitude}
+         WHERE id = #{storeId}
+    </update>
 
     <!-- 요일별 영업시간 -->
     <select id="getStoreHours" resultType="com.winter.winter_back.domain.owner.dto.OwnerHoursResponse">

@@ -1,6 +1,7 @@
 package com.winter.winter_back.domain.review.service.impl;
 
 import com.winter.winter_back.common.exception.BizException;
+import com.winter.winter_back.common.file.ImageStorage;
 import com.winter.winter_back.domain.order.dao.OrderDao;
 import com.winter.winter_back.domain.order.dto.OrderDto;
 import com.winter.winter_back.domain.order.dto.OrderStatus;
@@ -12,8 +13,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,6 +31,7 @@ import java.util.stream.Collectors;
  * 25. 9. 2.         hj kim             최초 생성
  * 26. 10. 26.       hj kim             받아간 주문만 리뷰 작성·작성 가능 여부에 본인·상태 확인, 공개 목록 작성자 아이디 숨김·이름 가림
  * 26. 10. 26.       hj kim             리뷰 작성·수정·삭제 시 가게 통계(별점·리뷰 수) 다시 계산
+ * 26. 10. 27.       hj kim             리뷰 사진(최대 3장, 본인이 올린 사진만) 올리기·수정·삭제 시 파일 정리
  */
 
 @Slf4j
@@ -39,6 +43,9 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewDao reviewDao;
     private final OrderDao orderDao;
     private final StoreDao storeDao;
+    private final ImageStorage imageStorage;
+
+    private static final int MAX_REVIEW_IMAGES = 3;
 
     @Override
     public ReviewListResponse getStoreReviews(Long storeId, int page, int limit) {
@@ -99,6 +106,39 @@ public class ReviewServiceImpl implements ReviewService {
         return hideAuthor(convertToResponse(review));
     }
 
+    /**
+     * Author      : hj kim
+     * Description : 리뷰 사진 올리기. 리뷰 작성 전에 한 장씩 올리고, 돌려받은 경로를 리뷰 작성 때 images 로 보낸다.
+     *               작성자별 폴더(reviews/{userId})에 저장해 남의 사진 경로를 리뷰에 붙이지 못하게 검사한다
+     * Date        : 26. 10. 27.
+     */
+    @Override
+    public String regReviewImage(String userId, MultipartFile file) {
+        return imageStorage.saveImage(file, "reviews/" + userId);
+    }
+
+    // 리뷰 사진 경로 검사: 최대 3장, 본인이 올린 사진(/uploads/reviews/{userId}/)만. 비어 있으면 null
+    private String normalizeReviewImages(String userId, String images) {
+        List<String> urls = toImageUrls(images);
+        if (urls.isEmpty()) {
+            return null;
+        }
+        String ownPrefix = ImageStorage.URL_PREFIX + "reviews/" + userId + "/";
+        boolean isValid = urls.size() <= MAX_REVIEW_IMAGES && urls.stream()
+                .allMatch(url -> url.startsWith(ownPrefix) && !url.contains("..") && url.indexOf('/', ownPrefix.length()) < 0);
+        if (!isValid) {
+            throw new BizException("invalid_review_images");
+        }
+        return String.join(",", urls);
+    }
+
+    private List<String> toImageUrls(String images) {
+        if (images == null || images.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(images.split(",")).map(String::trim).filter(url -> !url.isEmpty()).toList();
+    }
+
     @Override
     @Transactional
     public void createReview(String userId, ReviewRequest request) {
@@ -129,7 +169,7 @@ public class ReviewServiceImpl implements ReviewService {
         reviewDto.setOrderOrderId(request.getOrderOrderId());
         reviewDto.setRating(request.getRating());
         reviewDto.setContent(request.getContent());
-        reviewDto.setImages(request.getImages());
+        reviewDto.setImages(normalizeReviewImages(userId, request.getImages()));
         reviewDto.setCreatedDatetime(LocalDateTime.now());
         reviewDto.setModifiedDatetime(LocalDateTime.now());
 
@@ -163,13 +203,21 @@ public class ReviewServiceImpl implements ReviewService {
         reviewDto.setIdx(reviewId);
         reviewDto.setRating(request.getRating());
         reviewDto.setContent(request.getContent());
-        reviewDto.setImages(request.getImages());
+        // images 를 보내지 않으면(null) 기존 사진 유지, 빈 값이면 사진 모두 삭제
+        reviewDto.setImages(request.getImages() == null
+                ? existingReview.getImages()
+                : normalizeReviewImages(userId, request.getImages()));
         reviewDto.setModifiedDatetime(LocalDateTime.now());
 
         int result = reviewDao.updateReview(reviewDto);
         if (result == 0) {
             throw new BizException("fail_update");
         }
+        // 수정하면서 뺀 사진 파일은 커밋 뒤 삭제
+        List<String> keptImages = toImageUrls(reviewDto.getImages());
+        toImageUrls(existingReview.getImages()).stream()
+                .filter(url -> !keptImages.contains(url))
+                .forEach(imageStorage::deleteImage);
 
         storeDao.mergeStoreStats(existingReview.getStoreId());
         log.info("리뷰 수정 완료 - userId: {}, reviewId: {}", userId, reviewId);
@@ -193,6 +241,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         storeDao.mergeStoreStats(existingReview.getStoreId());
+        toImageUrls(existingReview.getImages()).forEach(imageStorage::deleteImage);
         log.info("리뷰 삭제 완료 - userId: {}, reviewId: {}", userId, reviewId);
     }
 

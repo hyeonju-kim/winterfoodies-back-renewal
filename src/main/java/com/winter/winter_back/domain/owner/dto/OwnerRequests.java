@@ -25,6 +25,7 @@ import java.util.List;
  * 26. 10. 26.       hj kim             최초 생성
  * 26. 10. 26.       hj kim             메뉴 추가·수정, 가게 정보, 영업시간 요청 추가
  * 26. 10. 26.       hj kim             가게 등록 요청 추가
+ * 26. 10. 27.       hj kim             가게 위치·주소 변경 요청 추가
  */
 public final class OwnerRequests {
 
@@ -129,6 +130,24 @@ public final class OwnerRequests {
         @Min(value = 0, message = "최소 주문금액은 0원 이상이어야 합니다")
         @Max(value = 1000000, message = "최소 주문금액은 100만원까지 입력할 수 있습니다")
         private Integer minOrderAmount;
+    }
+
+    /** 가게 위치·주소 변경 (위치 범위는 가게 등록과 같음) */
+    @Data
+    public static class StoreLocationRequest {
+        @NotBlank(message = "가게 위치(주소)를 입력해주세요")
+        @Size(max = 200, message = "주소는 200자까지 입력할 수 있습니다")
+        private String address;
+
+        @NotNull(message = "가게 위치를 설정해주세요")
+        @DecimalMin(value = "33.0", message = "가게 위치가 올바르지 않습니다")
+        @DecimalMax(value = "39.0", message = "가게 위치가 올바르지 않습니다")
+        private Double latitude;
+
+        @NotNull(message = "가게 위치를 설정해주세요")
+        @DecimalMin(value = "124.0", message = "가게 위치가 올바르지 않습니다")
+        @DecimalMax(value = "132.0", message = "가게 위치가 올바르지 않습니다")
+        private Double longitude;
     }
 
     /** 영업시간 수정 (요일 7개를 한 번에) */

@@ -35,6 +35,7 @@ public class ReviewRequest {
     @Size(max = 255, message = "리뷰 내용은 255자를 초과할 수 없습니다.")
     private String content;
 
+    // 리뷰 사진: POST /reviews/images 로 올린 경로를 쉼표로 이어 보낸다 (최대 3장)
     @Size(max = 255, message = "이미지 경로는 255자를 초과할 수 없습니다.")
     private String images;
 }
